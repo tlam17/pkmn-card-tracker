@@ -15,3 +15,15 @@ Track your entire Pokémon card collection by set, language, and rarity with a s
 - 📊 **Progress Tracking**: See how complete your sets are
 
 ---
+
+## 🧱 Tech Stack
+
+| Layer      | Tech                        |
+|------------|-----------------------------|
+| iOS App    | SwiftUI + MVVM              |
+| Backend    | Spring Boot + REST API      |
+| Auth       | JWT (JSON Web Token)        |
+| Database   | PostgreSQL                  |
+| Hosting    | TBD                         |
+
+---
