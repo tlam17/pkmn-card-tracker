@@ -1,4 +1,23 @@
 services:
+  backend:
+    container_name: pkmn-backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - JWT_SECRET=${JWT_SECRET}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - database
+    env_file:
+      - .env
+    networks:
+      - postgres-network
+
   database:
     container_name: pkmn-postgres
     image: postgres
