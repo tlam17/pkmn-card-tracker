@@ -15,6 +15,12 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 
+/*  
+ JWTService is responsible for generating, validating, and extracting information from JWT tokens
+ It uses the io.jsonwebtoken library to handle JWT operations
+ The secret key and expiration time are configured via application properties
+ The service provides methods to generate tokens, validate them against user details, and extract claims
+*/  
 @Service
 public class JWTService {
 
