@@ -15,18 +15,27 @@ import com.tlam.backend.user.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
+/*
+ * ApplicationConfig is responsible for configuring the security aspects of the application.
+ * It defines beans for user details service, authentication provider, authentication manager, and password encoder.
+ * The UserRepository is injected to load user details from the database.
+ * The password encoder uses BCrypt for hashing passwords.
+ */
 @Configuration
 @RequiredArgsConstructor
 public class ApplicationConfig {
 
     private final UserRepository userRepository;
 
+    // This bean provides a UserDetailsService that loads user details by username.
     @Bean
     public UserDetailsService userDetailsService() {
         return username -> userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
 
+    // This bean provides an AuthenticationProvider that uses the UserDetailsService and PasswordEncoder.
+    // It is responsible for authenticating users based on their credentials.
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService());
@@ -34,11 +43,13 @@ public class ApplicationConfig {
         return authProvider;
     }
 
+    // This bean provides an AuthenticationManager that is used to authenticate users.
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
+    // This bean provides a PasswordEncoder that uses BCrypt for hashing passwords.
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
