@@ -12,6 +12,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 import lombok.RequiredArgsConstructor;
 
+/*
+ * SecurityConfig is responsible for configuring the security settings of the application.
+ * It defines the security filter chain, which specifies the authorization rules for different endpoints.
+ * The JWTAuthenticationFilter is added to the filter chain to handle JWT authentication.
+ */
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
