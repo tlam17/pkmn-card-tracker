@@ -27,10 +27,10 @@ public class ApplicationConfig {
 
     private final UserRepository userRepository;
 
-    // This bean provides a UserDetailsService that loads user details by username.
+    // This bean provides a UserDetailsService that loads user details by email.
     @Bean
     public UserDetailsService userDetailsService() {
-        return username -> userRepository.findByUsername(username)
+        return email -> userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
 

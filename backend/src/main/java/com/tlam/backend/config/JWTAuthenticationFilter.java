@@ -35,7 +35,7 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
-        final String username;
+        final String email;
 
         // If the header is missing or doesn't start with "Bearer ", skip this filter
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -45,17 +45,17 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 
         // Extract the JWT from the header and validate it
         jwt = authHeader.substring(7);
-        username = jwtService.extractUsername(jwt);
+        email = jwtService.extractUsername(jwt);
 
         /*  
-         If the username is not null and there is no existing authentication in the context,
+         If the email is not null and there is no existing authentication in the context,
          load the user details and validate the JWT
          If valid, set the authentication in the security context
          This allows the application to recognize the user for the duration of the request
          If the JWT is valid, create an authentication token and set it in the security context 
         */
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+        if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            UserDetails userDetails = this.userDetailsService.loadUserByUsername(email);
             if (jwtService.isTokenValid(jwt, userDetails)) {
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                     userDetails, 
