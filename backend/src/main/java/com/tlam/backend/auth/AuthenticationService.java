@@ -56,6 +56,8 @@ public class AuthenticationService {
         } catch (DataIntegrityViolationException ex) {
             log.warn("Registration failed due to data integrity violation: {}", ex.getMessage());
             throw AuthenticationException.userAlreadyExists();
+        } catch (AuthenticationException ex) {
+            throw ex;
         } catch (Exception ex) {
             log.error("Registration failed due to unexpected error: {}", ex.getMessage(), ex);
             throw new RuntimeException("Registration failed due to an unexpected error");
