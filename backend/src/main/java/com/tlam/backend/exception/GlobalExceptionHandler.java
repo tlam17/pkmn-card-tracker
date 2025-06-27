@@ -11,14 +11,14 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /**
  * Global exception handler for the application.
  * This class handles various exceptions that can occur during request processing,
  * such as validation errors, authentication failures, and database constraint violations.
  */
-@RestController
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
     // Handle validation errors from @Valid annotations
