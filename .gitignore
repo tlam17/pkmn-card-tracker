@@ -1,53 +1,174 @@
-HELP.md
+# ====================
+# Environment & Secrets
+# ====================
 .env
+.env.local
+.env.production
+.env.staging
 *.env
-.env.*
+secrets/
+config/secrets/
+
+# ====================
+# Spring Boot Backend
+# ====================
+
+# Maven
 target/
-.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.properties
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
+# Spring Boot
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
 
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
+# Application logs
+logs/
+*.log
+*.log.*
+*.out
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-### VS Code ###
+# IDE - VS Code
 .vscode/
+*.code-workspace
 
-### Xcode ###
-## User settings
+# ====================
+# iOS/Xcode Frontend
+# ====================
+
+# Xcode
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+UserInterfaceState.xcuserstate
+project.xcworkspace/
+project.pbxproj
 xcuserdata/
+DerivedData/
+.swiftpm/
+*.hmap
 
-## Xcode 8 and earlier
+# iOS Build artifacts
+build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+Packages/
+Package.pins
+Package.resolved
 *.xcscmblueprint
-*.xccheckout
+.swiftpm/
 
-### Xcode Patch ###
-*.xcodeproj/*
-!*.xcodeproj/project.pbxproj
-!*.xcodeproj/xcshareddata/
-!*.xcodeproj/project.xcworkspace/
-!*.xcworkspace/contents.xcworkspacedata
-/*.gcno
-**/xcshareddata/WorkspaceSettings.xcsettings
+# Accio dependency management
+Dependencies/
+.accio/
+
+# Simulator files
+*.app
+
+# ====================
+# macOS System Files
+# ====================
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# ====================
+# Docker & Database
+# ====================
+docker-compose.override.yml
+.docker/
+db_data/
+postgres_data/
+pgdata/
+
+# ====================
+# General Development
+# ====================
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# ====================
+# API Documentation
+# ====================
+api-docs/
+swagger-ui/
+openapi.json
+openapi.yaml
+
+# ====================
+# Testing & Coverage
+# ====================
+coverage/
+*.coverage
+.nyc_output
+.coverage.*
+htmlcov/
+.tox/
+.pytest_cache/
+.cache/
+
+# ====================
+# Security & Keys
+# ====================
+*.pem
+*.key
+*.p12
+*.mobileprovision
+*.provisionprofile
+keystore
+*.jks
+
+# Apple Certificates
+*.cer
+*.p12
+*.mobileprovision
+
+# ====================
+# Analytics & Monitoring
+# ====================
+.sonar/
+sonar-project.properties
+
+# ====================
+# Misc
+# ====================
+*.pid
+*.seed
+*.pid.lock
+
+HELP.md
