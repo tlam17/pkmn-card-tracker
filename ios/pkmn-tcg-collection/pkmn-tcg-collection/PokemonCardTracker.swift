@@ -8,10 +8,11 @@
 import SwiftUI
 
 @main
-struct PKMNTCGApp: App {
+struct PokemonCardTracker: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
         }
     }
 }
+
