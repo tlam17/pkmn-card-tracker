@@ -8,7 +8,7 @@
 import SwiftUI
 
 @main
-struct pkmn_tcg_collectionApp: App {
+struct PKMNTCGApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
