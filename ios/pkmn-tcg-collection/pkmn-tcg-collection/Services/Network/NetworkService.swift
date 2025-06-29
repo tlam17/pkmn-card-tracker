@@ -7,71 +7,6 @@
 
 import Foundation
 
-
-// MARK: - API Error Types
-enum APIError: Error, LocalizedError {
-    case invalidURL
-    case noData
-    case decodingError(Error)
-    case serverError(Int, String?)
-    case networkError(Error)
-    case unauthorized
-    case forbidden
-    case notFound
-    case timeout
-    case unknown
-    
-    var errorDescription: String? {
-        switch self {
-        case .invalidURL:
-            return "Invalid URL provided"
-        case .noData:
-            return "No data received from server"
-        case .decodingError(let error):
-            return "Failed to decode response: \(error.localizedDescription)"
-        case .serverError(let code, let message):
-            return "Server error (\(code)): \(message ?? "Unknown error")"
-        case .networkError(let error):
-            return "Network error: \(error.localizedDescription)"
-        case .unauthorized:
-            return "Authentication required"
-        case .forbidden:
-            return "Access forbidden"
-        case .notFound:
-            return "Resource not found"
-        case .timeout:
-            return "Request timed out"
-        case .unknown:
-            return "An unknown error occurred"
-        }
-    }
-}
-
-// MARK: - HTTP Methods
-enum HTTPMethod: String {
-    case GET = "GET"
-    case POST = "POST"
-    case PUT = "PUT"
-    case PATCH = "PATCH"
-    case DELETE = "DELETE"
-}
-
-// MARK: - Network Service Protocol
-protocol NetworkServiceProtocol {
-    func request<T: Codable>(
-        endpoint: String,
-        method: HTTPMethod,
-        body: Data?,
-        responseType: T.Type
-    ) async throws -> T
-    
-    func requestWithoutResponse(
-        endpoint: String,
-        method: HTTPMethod,
-        body: Data?
-    ) async throws
-}
-
 // MARK: - Network Service Implementation
 final class NetworkService: NetworkServiceProtocol {
     
@@ -274,19 +209,6 @@ private extension NetworkService {
     }
 }
 
-// MARK: - Helper Types
-
-// Empty response type for requests that don't return data
-struct EmptyResponse: Codable {}
-
-struct ErrorResponse: Codable {
-    let status: Int
-    let error: String
-    let message: String
-    let details: [String: String]?
-    let timestamp: Int64
-}
-
 // MARK: - Convenience Methods
 extension NetworkService {
     
@@ -316,6 +238,28 @@ extension NetworkService {
         )
     }
     
+    // Convenience method for PUT requests with body
+    func put<T: Codable, U: Codable>(endpoint: String, body: T, responseType: U.Type) async throws -> U {
+        let bodyData = try encode(body)
+        return try await request(
+            endpoint: endpoint,
+            method: .PUT,
+            body: bodyData,
+            responseType: responseType
+        )
+    }
+    
+    // Convenience method for PATCH requests with body
+    func patch<T: Codable, U: Codable>(endpoint: String, body: T, responseType: U.Type) async throws -> U {
+        let bodyData = try encode(body)
+        return try await request(
+            endpoint: endpoint,
+            method: .PATCH,
+            body: bodyData,
+            responseType: responseType
+        )
+    }
+    
     // Convenience method for DELETE requests
     func delete(endpoint: String) async throws {
         try await requestWithoutResponse(
@@ -324,5 +268,18 @@ extension NetworkService {
             body: nil
         )
     }
+}
+
+// MARK: - Helper Types
+
+// Empty response type for requests that don't return data
+struct EmptyResponse: Codable {}
+
+struct ErrorResponse: Codable {
+    let status: Int
+    let error: String
+    let message: String
+    let details: [String: String]?
+    let timestamp: Int64
 }
 
