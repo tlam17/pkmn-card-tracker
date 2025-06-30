@@ -103,8 +103,6 @@ private extension NetworkService {
     
     // Adds JWT to request if available
     func addAuthenticationIfAvailable(to request: inout URLRequest) {
-        // TODO: This will be implemented when we create AuthenticationManager
-        // For now, we'll add a placeholder that checks for stored token
         if let token = getStoredToken() {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
@@ -112,8 +110,12 @@ private extension NetworkService {
     
     // Placeholder for token retrieval
     func getStoredToken() -> String? {
-        // TODO: Implement proper token retrieval from Keychain
-        return UserDefaults.standard.string(forKey: Config.Auth.tokenKey)
+        do {
+            return try KeychainService.shared.getToken()
+        } catch {
+            print("Failed to get token from keychain: \(error)")
+            return nil
+        }
     }
     
     // Validates HTTP response and throws appropriate errors
