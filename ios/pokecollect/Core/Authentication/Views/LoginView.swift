@@ -8,10 +8,22 @@
 import SwiftUI
 
 struct LoginView: View {
+    // MARK: - State Properties
     @State private var email = ""
     @State private var password = ""
     @State private var isPasswordVisible = false
-    @State private var isLoading = false
+    @State private var showingAlert = false
+    
+    // MARK: - Authentication Manager
+    @StateObject private var authManager = AuthenticationManager.shared
+    
+    // MARK: - Computed Properties
+    private var isFormValid: Bool {
+        !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !password.isEmpty &&
+        email.contains("@") &&
+        password.count >= Config.Validation.Auth.passwordMinLength
+    }
     
     var body: some View {
         GeometryReader { geometry in
@@ -79,6 +91,29 @@ struct LoginView: View {
                         }
                         .padding(.bottom, 50)
                         
+                        // Error Message Display
+                        if let errorMessage = authManager.errorMessage {
+                            VStack {
+                                HStack {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundColor(.red)
+                                    Text(errorMessage)
+                                        .foregroundColor(.red)
+                                        .font(.caption)
+                                        .multilineTextAlignment(.leading)
+                                    Spacer()
+                                }
+                                .padding()
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.white.opacity(0.9))
+                                )
+                                .padding(.horizontal, 32)
+                                .padding(.bottom, 16)
+                            }
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
+                        
                         // Login Form
                         VStack(spacing: 24) {
                             // Email Field
@@ -98,6 +133,8 @@ struct LoginView: View {
                                         .foregroundColor(.white)
                                         .autocapitalization(.none)
                                         .keyboardType(.emailAddress)
+                                        .textContentType(.emailAddress)
+                                        .disabled(authManager.isLoading)
                                 }
                                 .padding()
                                 .background(
@@ -138,6 +175,7 @@ struct LoginView: View {
                                         Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
                                             .foregroundColor(.white.opacity(0.7))
                                     }
+                                    .disabled(authManager.isLoading)
                                 }
                                 .padding()
                                 .background(
@@ -155,9 +193,11 @@ struct LoginView: View {
                                 Spacer()
                                 Button("Forgot Password?") {
                                     // Handle forgot password
+                                    print("Forgot password tapped")
                                 }
                                 .font(.footnote)
                                 .foregroundColor(.white.opacity(0.8))
+                                .disabled(authManager.isLoading)
                             }
                             .padding(.top, -8)
                         }
@@ -167,18 +207,16 @@ struct LoginView: View {
                         // Login Button
                         VStack(spacing: 16) {
                             Button(action: {
-                                // Handle login
-                                isLoading = true
-                                // Simulate loading
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                                    isLoading = false
-                                }
+                                handleLogin()
                             }) {
                                 HStack {
-                                    if isLoading {
+                                    if authManager.isLoading {
                                         ProgressView()
                                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                             .scaleEffect(0.8)
+                                        Text("Signing In...")
+                                            .font(.headline)
+                                            .fontWeight(.semibold)
                                     } else {
                                         Text("Sign In")
                                             .font(.headline)
@@ -190,7 +228,10 @@ struct LoginView: View {
                                 .frame(height: 50)
                                 .background(
                                     LinearGradient(
-                                        gradient: Gradient(colors: [Color.yellow, Color.orange]),
+                                        gradient: Gradient(colors: [
+                                            isFormValid ? Color.yellow : Color.gray.opacity(0.6),
+                                            isFormValid ? Color.orange : Color.gray.opacity(0.4)
+                                        ]),
                                         startPoint: .leading,
                                         endPoint: .trailing
                                     )
@@ -198,9 +239,9 @@ struct LoginView: View {
                                 .cornerRadius(12)
                                 .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
                             }
-                            .disabled(isLoading)
-                            .scaleEffect(isLoading ? 0.95 : 1.0)
-                            .animation(.easeInOut(duration: 0.1), value: isLoading)
+                            .disabled(!isFormValid || authManager.isLoading)
+                            .scaleEffect(authManager.isLoading ? 0.95 : 1.0)
+                            .animation(.easeInOut(duration: 0.1), value: authManager.isLoading)
                             
                             // Divider
                             HStack {
@@ -229,9 +270,11 @@ struct LoginView: View {
                             
                             Button("Sign Up") {
                                 // Navigate to sign up
+                                print("Navigate to sign up")
                             }
                             .foregroundColor(.white)
                             .fontWeight(.semibold)
+                            .disabled(authManager.isLoading)
                         }
                         .font(.footnote)
                         .padding(.bottom, 32)
@@ -239,6 +282,45 @@ struct LoginView: View {
                         Spacer(minLength: 32)
                     }
                 }
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: authManager.errorMessage)
+        .alert("Login Successful", isPresented: $showingAlert) {
+            Button("OK") { }
+        } message: {
+            Text("You have been logged in successfully!")
+        }
+        .onChange(of: authManager.isLoggedIn) { _, isLoggedIn in
+            if isLoggedIn {
+                showingAlert = true
+                // Clear form after successful login
+                email = ""
+                password = ""
+            }
+        }
+    }
+}
+
+// MARK: - Private Methods
+private extension LoginView {
+    func handleLogin() {
+        // Clear any previous error messages
+        authManager.errorMessage = nil
+        
+        // Validate form before attempting login
+        guard isFormValid else {
+            print("Form validation failed")
+            return
+        }
+        
+        // Perform login
+        Task {
+            do {
+                try await authManager.login(email: email, password: password)
+                print("Login completed successfully")
+            } catch {
+                print("Login failed: \(error.localizedDescription)")
+                // Error message is already handled by AuthenticationManager
             }
         }
     }
