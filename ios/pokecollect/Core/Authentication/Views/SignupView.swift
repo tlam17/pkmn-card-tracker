@@ -370,9 +370,9 @@ struct SignupView: View {
                             .padding(.vertical, 8)
                         }
                         .padding(.horizontal, 32)
-                        .padding(.bottom, 40)
+                        .padding(.bottom, 24)
                         
-                        // Sign Up Link
+                        // Login
                         HStack {
                             Text("Already have an account?")
                                 .foregroundColor(.white.opacity(0.7))
