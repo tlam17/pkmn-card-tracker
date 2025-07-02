@@ -9,8 +9,22 @@ import SwiftUI
 
 struct LoginView: View {
     
-    // MARK: - ViewModel
-    @StateObject private var viewModel = AuthenticationViewModel()
+    // MARK: - State Properties
+    @State private var email = ""
+    @State private var password = ""
+    @State private var isPasswordVisible = false
+    @State private var showingSuccessAlert = false
+    
+    // MARK: - Authentication Manager
+    @StateObject private var authManager = AuthenticationManager.shared
+    
+    // MARK: - Computed Properties
+    private var isLoginFormValid: Bool {
+        !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !password.isEmpty &&
+        email.contains("@") &&
+        password.count >= Config.Validation.Auth.passwordMinLength
+    }
     
     var body: some View {
         GeometryReader { geometry in
@@ -38,10 +52,12 @@ struct LoginView: View {
                         logoSection
                         
                         // Error Message Display
-                        if let errorMessage = viewModel.errorMessage {
+                        if let errorMessage = authManager.errorMessage {
                             ErrorMessageView(
                                 message: errorMessage,
-                                onDismiss: viewModel.clearError
+                                onDismiss: {
+                                    authManager.errorMessage = nil
+                                }
                             )
                         }
                         
@@ -59,8 +75,8 @@ struct LoginView: View {
                 }
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: viewModel.errorMessage)
-        .alert("Login Successful", isPresented: $viewModel.showingSuccessAlert) {
+        .animation(.easeInOut(duration: 0.3), value: authManager.errorMessage)
+        .alert("Login Successful", isPresented: $showingSuccessAlert) {
             Button("OK") { }
         } message: {
             Text("You have been logged in successfully!")
@@ -129,11 +145,11 @@ private extension LoginView {
                 title: "Email",
                 placeholder: "Enter your email",
                 iconName: "envelope",
-                text: $viewModel.email,
+                text: $email,
                 keyboardType: .emailAddress,
                 textContentType: .emailAddress,
                 autocapitalization: .none,
-                isDisabled: viewModel.isLoading
+                isDisabled: authManager.isLoading
             )
             
             // Password Field
@@ -141,11 +157,13 @@ private extension LoginView {
                 title: "Password",
                 placeholder: "Enter your password",
                 iconName: "lock",
-                text: $viewModel.password,
-                isPasswordVisible: $viewModel.isPasswordVisible,
+                text: $password,
+                isPasswordVisible: $isPasswordVisible,
                 textContentType: .password,
-                isDisabled: viewModel.isLoading,
-                onPasswordVisibilityToggle: viewModel.togglePasswordVisibility
+                isDisabled: authManager.isLoading,
+                onPasswordVisibilityToggle: {
+                    isPasswordVisible.toggle()
+                }
             )
             
             // Forgot Password
@@ -157,7 +175,7 @@ private extension LoginView {
                 }
                 .font(.footnote)
                 .foregroundColor(.white.opacity(0.8))
-                .disabled(viewModel.isLoading)
+                .disabled(authManager.isLoading)
             }
             .padding(.top, -8)
         }
@@ -170,12 +188,10 @@ private extension LoginView {
             AuthButtonView(
                 title: "Sign In",
                 loadingTitle: "Signing In...",
-                isLoading: viewModel.isLoading,
-                isEnabled: viewModel.isLoginFormValid
+                isLoading: authManager.isLoading,
+                isEnabled: isLoginFormValid
             ) {
-                Task {
-                    await viewModel.handleLogin()
-                }
+                handleLogin()
             }
             .padding(.horizontal, 32)
         }
@@ -213,11 +229,44 @@ private extension LoginView {
                 }
                 .foregroundColor(.white)
                 .fontWeight(.semibold)
-                .disabled(viewModel.isLoading)
+                .disabled(authManager.isLoading)
             }
             .font(.footnote)
             .padding(.bottom, 32)
         }
+    }
+}
+
+// MARK: - Private Methods
+private extension LoginView {
+    func handleLogin() {
+        // Clear any previous error messages
+        authManager.errorMessage = nil
+        
+        // Validate form before attempting login
+        guard isLoginFormValid else {
+            print("Login form validation failed")
+            return
+        }
+        
+        // Perform login
+        Task {
+            do {
+                try await authManager.login(email: email, password: password)
+                showingSuccessAlert = true
+                clearLoginForm()
+                print("Login completed successfully")
+            } catch {
+                print("Login failed: \(error.localizedDescription)")
+                // Error message is already handled by AuthenticationManager
+            }
+        }
+    }
+    
+    func clearLoginForm() {
+        email = ""
+        password = ""
+        isPasswordVisible = false
     }
 }
 

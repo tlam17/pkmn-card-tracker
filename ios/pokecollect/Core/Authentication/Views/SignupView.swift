@@ -16,7 +16,7 @@ struct SignupView: View {
     @State private var acceptTerms = false
     @State private var isPasswordVisible = false
     @State private var isConfirmPasswordVisible = false
-    @State private var showingAlert = false
+    @State private var showingSuccessAlert = false
     
     // MARK: - Authentication Manager
     @StateObject private var authManager = AuthenticationManager.shared
@@ -39,7 +39,8 @@ struct SignupView: View {
         // Password validation
         let isPasswordValid = password.count >= Config.Validation.Auth.passwordMinLength &&
                              password.count <= Config.Validation.Auth.passwordMaxLength &&
-                             !password.isEmpty
+                             !password.isEmpty &&
+                             isPasswordStrong
         
         // Confirm password validation
         let isConfirmPasswordValid = !confirmPassword.isEmpty &&
@@ -54,6 +55,11 @@ struct SignupView: View {
                isPasswordValid &&
                isConfirmPasswordValid &&
                isTermsAccepted
+    }
+    
+    private var isPasswordStrong: Bool {
+        let passwordRegex = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]+$"
+        return NSPredicate(format: "SELF MATCHES %@", passwordRegex).evaluate(with: password)
     }
     
     var body: some View {
@@ -72,326 +78,255 @@ struct SignupView: View {
                 .ignoresSafeArea()
                 
                 // Floating orbs for visual appeal
-                Circle()
-                    .fill(Color.white.opacity(0.12))
-                    .frame(width: 200, height: 200)
-                    .offset(x: -100, y: -200)
-                
-                Circle()
-                    .fill(Color.yellow.opacity(0.15))
-                    .frame(width: 150, height: 150)
-                    .offset(x: 120, y: -300)
-                
-                Circle()
-                    .fill(Color.orange.opacity(0.12))
-                    .frame(width: 100, height: 100)
-                    .offset(x: 150, y: 200)
+                backgroundOrbs
                 
                 ScrollView {
                     VStack(spacing: 0) {
                         Spacer(minLength: 60)
                         
                         // Title Section
-                        VStack(spacing: 16) {
-                            VStack(spacing: 4) {
-                                Text("Create Account")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.white)
-                            }
+                        titleSection
+                        
+                        // Error Message Display
+                        if let errorMessage = authManager.errorMessage {
+                            ErrorMessageView(
+                                message: errorMessage,
+                                onDismiss: {
+                                    authManager.errorMessage = nil
+                                }
+                            )
                         }
-                        .padding(.bottom, 40)
                         
                         // Signup Form
-                        VStack(spacing: 24) {
-                            // Name Field
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Name")
-                                    .font(.footnote)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.white.opacity(0.9))
-                                
-                                HStack {
-                                    Image(systemName: "person")
-                                        .foregroundColor(.white.opacity(0.7))
-                                        .frame(width: 20)
-                                    
-                                    TextField("Enter your name", text: $name)
-                                        .textFieldStyle(PlainTextFieldStyle())
-                                        .foregroundColor(.white)
-                                        .autocapitalization(.words)
-                                        .textContentType(.name)
-                                        .disabled(authManager.isLoading)
-                                }
-                                .padding()
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.white.opacity(0.15))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                                        )
-                                )
-                            }
-                            
-                            
-                            // Email Field
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Email")
-                                    .font(.footnote)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.white.opacity(0.9))
-                                
-                                HStack {
-                                    Image(systemName: "envelope")
-                                        .foregroundColor(.white.opacity(0.7))
-                                        .frame(width: 20)
-                                    
-                                    TextField("Enter your email", text: $email)
-                                        .textFieldStyle(PlainTextFieldStyle())
-                                        .foregroundColor(.white)
-                                        .autocapitalization(.none)
-                                        .keyboardType(.emailAddress)
-                                        .textContentType(.emailAddress)
-                                        .disabled(authManager.isLoading)
-                                }
-                                .padding()
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.white.opacity(0.15))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                                        )
-                                )
-                            }
-                            
-                            // Password Field
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Password")
-                                    .font(.footnote)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.white.opacity(0.9))
-                                
-                                HStack {
-                                    Image(systemName: "lock")
-                                        .foregroundColor(.white.opacity(0.7))
-                                        .frame(width: 20)
-                                    
-                                    if isPasswordVisible {
-                                        TextField("Enter your password", text: $password)
-                                            .textFieldStyle(PlainTextFieldStyle())
-                                            .foregroundColor(.white)
-                                    } else {
-                                        SecureField("Enter your password", text: $password)
-                                            .textFieldStyle(PlainTextFieldStyle())
-                                            .foregroundColor(.white)
-                                    }
-                                    
-                                    Button(action: {
-                                        isPasswordVisible.toggle()
-                                    }) {
-                                        Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
-                                            .foregroundColor(.white.opacity(0.7))
-                                    }
-                                    .disabled(authManager.isLoading)
-                                }
-                                .padding()
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.white.opacity(0.15))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                                        )
-                                )
-                            }
-                            
-                            // Confirm Password
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Confirm Password")
-                                    .font(.footnote)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.white.opacity(0.9))
-                                
-                                HStack {
-                                    Image(systemName: "lock")
-                                        .foregroundColor(.white.opacity(0.7))
-                                        .frame(width: 20)
-                                    
-                                    if isConfirmPasswordVisible {
-                                        TextField("Confirm your password", text: $confirmPassword)
-                                            .textFieldStyle(PlainTextFieldStyle())
-                                            .foregroundColor(.white)
-                                    } else {
-                                        SecureField("Confirm your password", text: $confirmPassword)
-                                            .textFieldStyle(PlainTextFieldStyle())
-                                            .foregroundColor(.white)
-                                    }
-                                    
-                                    Button(action: {
-                                        isConfirmPasswordVisible.toggle()
-                                    }) {
-                                        Image(systemName: isConfirmPasswordVisible ? "eye.slash" : "eye")
-                                            .foregroundColor(.white.opacity(0.7))
-                                    }
-                                    .disabled(authManager.isLoading)
-                                }
-                                .padding()
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.white.opacity(0.15))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                                        )
-                                )
-                            }
-                            
-                            // Terms of Service Acceptance
-                            VStack(alignment: .leading, spacing: 12) {
-                                HStack(alignment: .top, spacing: 12) {
-                                    Button(action: {
-                                        acceptTerms.toggle()
-                                    }) {
-                                        ZStack {
-                                            RoundedRectangle(cornerRadius: 6)
-                                                .fill(acceptTerms ? Color.yellow : Color.white.opacity(0.15))
-                                                .frame(width: 24, height: 24)
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 6)
-                                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                                                )
-                                            
-                                            if acceptTerms {
-                                                Image(systemName: "checkmark")
-                                                    .font(.system(size: 14, weight: .bold))
-                                                    .foregroundColor(.black)
-                                            }
-                                        }
-                                    }
-                                    .disabled(authManager.isLoading)
-                                    
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        HStack(spacing: 0) {
-                                            Text("I agree to the ")
-                                                .font(.footnote)
-                                                .foregroundColor(.white.opacity(0.8))
-                                            
-                                            Button("Terms of Service") {
-                                                // Handle terms of service link
-                                                print("Show Terms of Service")
-                                            }
-                                            .font(.footnote)
-                                            .foregroundColor(.yellow)
-                                            .underline()
-                                            .disabled(authManager.isLoading)
-                                            
-                                            Text(" and ")
-                                                .font(.footnote)
-                                                .foregroundColor(.white.opacity(0.8))
-                                            
-                                            Button("Privacy Policy") {
-                                                // Handle privacy policy link
-                                                print("Show Privacy Policy")
-                                            }
-                                            .font(.footnote)
-                                            .foregroundColor(.yellow)
-                                            .underline()
-                                            .disabled(authManager.isLoading)
-                                        }
-                                        
-                                        Text("By creating an account, you confirm that you are at least 13 years old.")
-                                            .font(.caption)
-                                            .foregroundColor(.white.opacity(0.6))
-                                            .multilineTextAlignment(.leading)
-                                    }
-                                }
-                                .padding(.top, 8)
-                            }
-                        }
-                        .padding(.horizontal, 32)
-                        .padding(.bottom, 32)
+                        signupForm
                         
                         // Signup Button
-                        VStack(spacing: 16) {
-                            Button(action: {
-                                handleSignup()
-                            }) {
-                                HStack {
-                                    if authManager.isLoading {
-                                        ProgressView()
-                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                            .scaleEffect(0.8)
-                                        Text("Creating account...")
-                                            .font(.headline)
-                                            .fontWeight(.semibold)
-                                    } else {
-                                        Text("Create Account")
-                                            .font(.headline)
-                                            .fontWeight(.semibold)
-                                    }
-                                }
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 50)
-                                .background(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            isFormValid ? Color.yellow : Color.gray.opacity(0.6),
-                                            isFormValid ? Color.orange : Color.gray.opacity(0.4)
-                                        ]),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .cornerRadius(12)
-                                .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
-                            }
-                            .disabled(!isFormValid || authManager.isLoading)
-                            .scaleEffect(authManager.isLoading ? 0.95 : 1.0)
-                            .animation(.easeInOut(duration: 0.1), value: authManager.isLoading)
-                            
-                            // Divider
-                            HStack {
-                                Rectangle()
-                                    .fill(Color.white.opacity(0.3))
-                                    .frame(height: 1)
-                                
-                                Text("or")
-                                    .font(.footnote)
-                                    .foregroundColor(.white.opacity(0.7))
-                                    .padding(.horizontal, 16)
-                                
-                                Rectangle()
-                                    .fill(Color.white.opacity(0.3))
-                                    .frame(height: 1)
-                            }
-                            .padding(.vertical, 8)
-                        }
-                        .padding(.horizontal, 32)
-                        .padding(.bottom, 24)
+                        signupButton
                         
-                        // Login
-                        HStack {
-                            Text("Already have an account?")
-                                .foregroundColor(.white.opacity(0.7))
-                            
-                            Button("Login") {
-                                // Navigate to sign up
-                                print("Navigate to login")
-                            }
-                            .foregroundColor(.white)
-                            .fontWeight(.semibold)
-                            .disabled(authManager.isLoading)
-                        }
-                        .font(.footnote)
-                        .padding(.bottom, 32)
+                        // Divider and Login Link
+                        bottomSection
                         
                         Spacer(minLength: 32)
                     }
                 }
             }
+        }
+        .animation(.easeInOut(duration: 0.3), value: authManager.errorMessage)
+        .alert("Registration Successful", isPresented: $showingSuccessAlert) {
+            Button("OK") { }
+        } message: {
+            Text("Your account has been created successfully!")
+        }
+    }
+}
+
+// MARK: - View Components
+private extension SignupView {
+    
+    var backgroundOrbs: some View {
+        Group {
+            Circle()
+                .fill(Color.white.opacity(0.12))
+                .frame(width: 200, height: 200)
+                .offset(x: -100, y: -200)
+            
+            Circle()
+                .fill(Color.yellow.opacity(0.15))
+                .frame(width: 150, height: 150)
+                .offset(x: 120, y: -300)
+            
+            Circle()
+                .fill(Color.orange.opacity(0.12))
+                .frame(width: 100, height: 100)
+                .offset(x: 150, y: 200)
+        }
+    }
+    
+    var titleSection: some View {
+        VStack(spacing: 16) {
+            VStack(spacing: 4) {
+                Text("Create Account")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+            }
+        }
+        .padding(.bottom, 40)
+    }
+    
+    var signupForm: some View {
+        VStack(spacing: 24) {
+            // Name Field
+            AuthTextFieldView(
+                title: "Name",
+                placeholder: "Enter your name",
+                iconName: "person",
+                text: $name,
+                textContentType: .name,
+                autocapitalization: .words,
+                isDisabled: authManager.isLoading
+            )
+            
+            // Email Field
+            AuthTextFieldView(
+                title: "Email",
+                placeholder: "Enter your email",
+                iconName: "envelope",
+                text: $email,
+                keyboardType: .emailAddress,
+                textContentType: .emailAddress,
+                autocapitalization: .none,
+                isDisabled: authManager.isLoading
+            )
+            
+            // Password Field
+            AuthTextFieldView(
+                title: "Password",
+                placeholder: "Enter your password",
+                iconName: "lock",
+                text: $password,
+                isPasswordVisible: $isPasswordVisible,
+                textContentType: .newPassword,
+                isDisabled: authManager.isLoading,
+                onPasswordVisibilityToggle: {
+                    isPasswordVisible.toggle()
+                }
+            )
+            
+            // Confirm Password
+            AuthTextFieldView(
+                title: "Confirm Password",
+                placeholder: "Confirm your password",
+                iconName: "lock",
+                text: $confirmPassword,
+                isPasswordVisible: $isConfirmPasswordVisible,
+                textContentType: .newPassword,
+                isDisabled: authManager.isLoading,
+                onPasswordVisibilityToggle: {
+                    isConfirmPasswordVisible.toggle()
+                }
+            )
+            
+            // Terms of Service Acceptance
+            termsOfServiceSection
+        }
+        .padding(.horizontal, 32)
+        .padding(.bottom, 32)
+    }
+    
+    var termsOfServiceSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                Button(action: {
+                    acceptTerms.toggle()
+                }) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(acceptTerms ? Color.yellow : Color.white.opacity(0.15))
+                            .frame(width: 24, height: 24)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                            )
+                        
+                        if acceptTerms {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.black)
+                        }
+                    }
+                }
+                .disabled(authManager.isLoading)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 0) {
+                        Text("I agree to the ")
+                            .font(.footnote)
+                            .foregroundColor(.white.opacity(0.8))
+                        
+                        Button("Terms of Service") {
+                            // Handle terms of service link
+                            print("Show Terms of Service")
+                        }
+                        .font(.footnote)
+                        .foregroundColor(.yellow)
+                        .underline()
+                        .disabled(authManager.isLoading)
+                        
+                        Text(" and ")
+                            .font(.footnote)
+                            .foregroundColor(.white.opacity(0.8))
+                        
+                        Button("Privacy Policy") {
+                            // Handle privacy policy link
+                            print("Show Privacy Policy")
+                        }
+                        .font(.footnote)
+                        .foregroundColor(.yellow)
+                        .underline()
+                        .disabled(authManager.isLoading)
+                    }
+                    
+                    Text("By creating an account, you confirm that you are at least 13 years old.")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.6))
+                        .multilineTextAlignment(.leading)
+                }
+            }
+            .padding(.top, 8)
+        }
+    }
+    
+    var signupButton: some View {
+        VStack(spacing: 16) {
+            AuthButtonView(
+                title: "Create Account",
+                loadingTitle: "Creating account...",
+                isLoading: authManager.isLoading,
+                isEnabled: isFormValid
+            ) {
+                handleSignup()
+            }
+            .padding(.horizontal, 32)
+        }
+        .padding(.bottom, 32)
+    }
+    
+    var bottomSection: some View {
+        VStack(spacing: 16) {
+            // Divider
+            HStack {
+                Rectangle()
+                    .fill(Color.white.opacity(0.3))
+                    .frame(height: 1)
+                
+                Text("or")
+                    .font(.footnote)
+                    .foregroundColor(.white.opacity(0.7))
+                    .padding(.horizontal, 16)
+                
+                Rectangle()
+                    .fill(Color.white.opacity(0.3))
+                    .frame(height: 1)
+            }
+            .padding(.horizontal, 32)
+            .padding(.vertical, 8)
+            
+            // Login Link
+            HStack {
+                Text("Already have an account?")
+                    .foregroundColor(.white.opacity(0.7))
+                
+                Button("Login") {
+                    // Navigate to login
+                    print("Navigate to login")
+                }
+                .foregroundColor(.white)
+                .fontWeight(.semibold)
+                .disabled(authManager.isLoading)
+            }
+            .font(.footnote)
+            .padding(.bottom, 32)
         }
     }
 }
@@ -402,22 +337,34 @@ private extension SignupView {
         // Clear any previous error messages
         authManager.errorMessage = nil
         
-        // Validate form before attempting login
+        // Validate form before attempting signup
         guard isFormValid else {
             print("Form validation failed")
             return
         }
         
-        // Perform login
+        // Perform signup
         Task {
             do {
                 try await authManager.register(name: name, email: email, password: password)
+                showingSuccessAlert = true
+                clearSignupForm()
                 print("Signup completed successfully")
             } catch {
                 print("Signup failed: \(error.localizedDescription)")
                 // Error message is already handled by AuthenticationManager
             }
         }
+    }
+    
+    func clearSignupForm() {
+        name = ""
+        email = ""
+        password = ""
+        confirmPassword = ""
+        acceptTerms = false
+        isPasswordVisible = false
+        isConfirmPasswordVisible = false
     }
 }
 
