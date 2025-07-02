@@ -191,7 +191,7 @@ private extension AuthenticationManager {
     func handleAuthenticationError(_ error: Error) {
         switch error {
         case APIError.unauthorized:
-            errorMessage = "Invalid email of password."
+            errorMessage = "Invalid email or password."
         case APIError.serverError(let code, let message):
             if code == 409 {
                 errorMessage = "An account with this email already exists."
