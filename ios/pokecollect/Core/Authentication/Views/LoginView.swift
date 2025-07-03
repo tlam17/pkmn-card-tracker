@@ -67,9 +67,6 @@ struct LoginView: View {
                         // Login Button
                         loginButton
                         
-                        // Divider and Sign Up Link
-                        bottomSection
-                        
                         Spacer(minLength: 32)
                     }
                 }
@@ -196,44 +193,6 @@ private extension LoginView {
             .padding(.horizontal, 32)
         }
         .padding(.bottom, 40)
-    }
-    
-    var bottomSection: some View {
-        VStack(spacing: 16) {
-            // Divider
-            HStack {
-                Rectangle()
-                    .fill(Color.white.opacity(0.3))
-                    .frame(height: 1)
-                
-                Text("or")
-                    .font(.footnote)
-                    .foregroundColor(.white.opacity(0.7))
-                    .padding(.horizontal, 16)
-                
-                Rectangle()
-                    .fill(Color.white.opacity(0.3))
-                    .frame(height: 1)
-            }
-            .padding(.horizontal, 32)
-            .padding(.vertical, 8)
-            
-            // Sign Up Link
-            HStack {
-                Text("Don't have an account?")
-                    .foregroundColor(.white.opacity(0.7))
-                
-                Button("Sign Up") {
-                    // Navigate to sign up
-                    print("Navigate to sign up")
-                }
-                .foregroundColor(.white)
-                .fontWeight(.semibold)
-                .disabled(authManager.isLoading)
-            }
-            .font(.footnote)
-            .padding(.bottom, 32)
-        }
     }
 }
 
