@@ -11,8 +11,7 @@ import SwiftUI
 struct PokeCollectApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            AppView()
         }
     }
 }
-
