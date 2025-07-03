@@ -127,9 +127,6 @@ struct SignupView: View {
                         // Signup Button
                         signupButton
                         
-                        // Divider and Login Link
-                        bottomSection
-                        
                         Spacer(minLength: 32)
                     }
                 }
@@ -168,14 +165,30 @@ private extension SignupView {
     
     var titleSection: some View {
         VStack(spacing: 16) {
-            VStack(spacing: 4) {
-                Text("Create Account")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
+            ZStack {
+                    Circle()
+                        .fill(Color.white.opacity(0.2))
+                        .frame(width: 80, height: 80)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.white.opacity(0.3), lineWidth: 2)
+                        )
+                    
+                    Image(systemName: "rectangle.stack.fill")
+                        .font(.system(size: 32))
+                        .foregroundColor(.white)
+                }
+                .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
+            VStack(spacing: 16) {
+                VStack(spacing: 4) {
+                    Text("Create Account")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                }
             }
+            .padding(.bottom, 40)
         }
-        .padding(.bottom, 40)
     }
     
     var signupForm: some View {
@@ -332,44 +345,6 @@ private extension SignupView {
             .padding(.horizontal, 32)
         }
         .padding(.bottom, 32)
-    }
-    
-    var bottomSection: some View {
-        VStack(spacing: 16) {
-            // Divider
-            HStack {
-                Rectangle()
-                    .fill(Color.white.opacity(0.3))
-                    .frame(height: 1)
-                
-                Text("or")
-                    .font(.footnote)
-                    .foregroundColor(.white.opacity(0.7))
-                    .padding(.horizontal, 16)
-                
-                Rectangle()
-                    .fill(Color.white.opacity(0.3))
-                    .frame(height: 1)
-            }
-            .padding(.horizontal, 32)
-            .padding(.vertical, 8)
-            
-            // Login Link
-            HStack {
-                Text("Already have an account?")
-                    .foregroundColor(.white.opacity(0.7))
-                
-                Button("Login") {
-                    // Navigate to login
-                    print("Navigate to login")
-                }
-                .foregroundColor(.white)
-                .fontWeight(.semibold)
-                .disabled(authManager.isLoading)
-            }
-            .font(.footnote)
-            .padding(.bottom, 32)
-        }
     }
 }
 
