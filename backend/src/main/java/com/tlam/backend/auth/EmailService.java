@@ -22,7 +22,7 @@ public class EmailService {
     private final Resend resend;
     private final String fromEmail;
 
-    public EmailService(@Value("$RESEND_API_KEY") String apiKey, @Value("$FROM_EMAIL") String fromEmail) {
+    public EmailService(@Value("${RESEND_API_KEY}") String apiKey, @Value("${FROM_EMAIL}") String fromEmail) {
         this.resend = new Resend(apiKey);
         this.fromEmail = fromEmail;
     }
