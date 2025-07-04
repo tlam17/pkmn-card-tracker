@@ -31,6 +31,7 @@ public class AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final JWTService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final EmailService emailService;
 
     // Registers a new user and generates a JWT token for them
     public AuthenticationResponse register(SignupRequest request) {
@@ -50,6 +51,9 @@ public class AuthenticationService {
             log.info("User registered successfully: {}", user.getEmail());
 
             var jwtToken = jwtService.generateToken(user);
+
+            sendWelcomeEmailAsync(user);
+            
             return AuthenticationResponse.builder()
                     .token(jwtToken)
                     .build();
@@ -98,5 +102,23 @@ public class AuthenticationService {
             log.error("Unexpected error during login: {}", ex.getMessage(), ex);
             throw new RuntimeException("Login failed due to an unexpected error");
         }
+    }
+
+    // Sends a welcome email to the user asynchronously after successful registration
+    private void sendWelcomeEmailAsync(User user) {
+        // Run email sending in a separate thread to avoid blocking registration
+        Thread.ofVirtual().start(() -> {
+            try {
+                boolean emailSent = emailService.sendWelcomeEmail(user);
+                if (emailSent) {
+                    log.info("Welcome email sent successfully to: {}", user.getEmail());
+                } else {
+                    log.warn("Failed to send welcome email to: {} (but registration was successful)", user.getEmail());
+                }
+            } catch (Exception e) {
+                log.error("Error sending welcome email to: {} (but registration was successful): {}", 
+                         user.getEmail(), e.getMessage(), e);
+            }
+        });
     }
 }
