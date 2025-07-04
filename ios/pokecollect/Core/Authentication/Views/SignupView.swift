@@ -25,30 +25,30 @@ struct SignupView: View {
     @StateObject private var authManager = AuthenticationManager.shared
     
     // MARK: - Password Validation Properties
-       private var passwordRequirements: [PasswordRequirement] {
-           [
-               PasswordRequirement(
-                   text: "At least 8 characters",
-                   isMet: password.count >= Config.Validation.Auth.passwordMinLength
-               ),
-               PasswordRequirement(
-                   text: "One uppercase letter (A-Z)",
-                   isMet: password.range(of: "[A-Z]", options: .regularExpression) != nil
-               ),
-               PasswordRequirement(
-                   text: "One lowercase letter (a-z)",
-                   isMet: password.range(of: "[a-z]", options: .regularExpression) != nil
-               ),
-               PasswordRequirement(
-                   text: "One number (0-9)",
-                   isMet: password.range(of: "[0-9]", options: .regularExpression) != nil
-               ),
-               PasswordRequirement(
-                   text: "One special character (@$!%*?&)",
-                   isMet: password.range(of: "[@$!%*?&]", options: .regularExpression) != nil
-               )
-           ]
-       }
+    private var passwordRequirements: [PasswordRequirement] {
+        [
+            PasswordRequirement(
+                text: "At least 8 characters",
+                isMet: password.count >= Config.Validation.Auth.passwordMinLength
+            ),
+            PasswordRequirement(
+                text: "One uppercase letter (A-Z)",
+                isMet: password.range(of: "[A-Z]", options: .regularExpression) != nil
+            ),
+            PasswordRequirement(
+                text: "One lowercase letter (a-z)",
+                isMet: password.range(of: "[a-z]", options: .regularExpression) != nil
+            ),
+            PasswordRequirement(
+                text: "One number (0-9)",
+                isMet: password.range(of: "[0-9]", options: .regularExpression) != nil
+            ),
+            PasswordRequirement(
+                text: "One special character (@$!%*?&)",
+                isMet: password.range(of: "[@$!%*?&]", options: .regularExpression) != nil
+            )
+        ]
+    }
     
     // MARK: - Computed Properties
     private var isFormValid: Bool {
@@ -171,29 +171,11 @@ private extension SignupView {
     }
     
     var titleSection: some View {
-        VStack(spacing: 16) {
-            // Smaller logo
-            ZStack {
-                Circle()
-                    .fill(Color.white.opacity(0.2))
-                    .frame(width: 70, height: 70)
-                    .overlay(
-                        Circle()
-                            .stroke(Color.white.opacity(0.3), lineWidth: 2)
-                    )
-                
-                Image(systemName: "rectangle.stack.fill")
-                    .font(.system(size: 32))
-                    .foregroundColor(.white)
-            }
-            .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
-            
-            VStack(spacing: 4) {
-                Text("Create Account")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-            }
+        VStack(spacing: 4) {
+            Text("Create Account")
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
         }
         .padding(.bottom, 32)
     }
@@ -240,7 +222,7 @@ private extension SignupView {
                 
                 // Password Requirements Display
                 if !password.isEmpty {
-                    passwordRequirementsView
+                    passwordValidationView
                 }
             }
             
@@ -267,6 +249,48 @@ private extension SignupView {
         }
         .padding(.horizontal, 32)
         .padding(.bottom, 32)
+    }
+    
+    var passwordValidationView: some View {
+        Group {
+            if isPasswordStrong {
+                // Show "Valid password" when all requirements are met
+                validPasswordIndicator
+            } else {
+                // Show detailed requirements when password is not yet valid
+                passwordRequirementsView
+            }
+        }
+    }
+    
+    var validPasswordIndicator: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 16))
+                .foregroundColor(.green)
+            
+            Text("Valid password")
+                .font(.callout)
+                .fontWeight(.medium)
+                .foregroundColor(.white)
+            
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.green.opacity(0.2))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.green.opacity(0.4), lineWidth: 1)
+                )
+        )
+        .transition(.asymmetric(
+            insertion: .opacity.combined(with: .scale),
+            removal: .opacity.combined(with: .scale)
+        ))
+        .animation(.easeInOut(duration: 0.3), value: isPasswordStrong)
     }
     
     var passwordRequirementsView: some View {
@@ -309,8 +333,11 @@ private extension SignupView {
                         .stroke(Color.white.opacity(0.2), lineWidth: 1)
                 )
         )
-        .transition(.opacity.combined(with: .scale))
-        .animation(.easeInOut(duration: 0.2), value: passwordRequirements.map { $0.isMet })
+        .transition(.asymmetric(
+            insertion: .opacity.combined(with: .scale),
+            removal: .opacity.combined(with: .scale)
+        ))
+        .animation(.easeInOut(duration: 0.3), value: passwordRequirements.map { $0.isMet })
     }
     
     var passwordMatchIndicator: some View {
