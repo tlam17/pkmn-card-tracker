@@ -9,6 +9,9 @@ import SwiftUI
 
 struct LoginView: View {
     
+    // MARK: - Navigation Callback
+    let onSignUpTapped: () -> Void
+    
     // MARK: - State Properties
     @State private var email = ""
     @State private var password = ""
@@ -66,6 +69,9 @@ struct LoginView: View {
                         
                         // Login Button
                         loginButton
+                        
+                        // Divider and Sign Up Link
+                        bottomSection
                         
                         Spacer(minLength: 32)
                     }
@@ -194,6 +200,43 @@ private extension LoginView {
         }
         .padding(.bottom, 40)
     }
+    
+    var bottomSection: some View {
+        VStack(spacing: 16) {
+            // Divider
+            HStack {
+                Rectangle()
+                    .fill(Color.white.opacity(0.3))
+                    .frame(height: 1)
+                
+                Text("or")
+                    .font(.footnote)
+                    .foregroundColor(.white.opacity(0.7))
+                    .padding(.horizontal, 16)
+                
+                Rectangle()
+                    .fill(Color.white.opacity(0.3))
+                    .frame(height: 1)
+            }
+            .padding(.horizontal, 32)
+            .padding(.vertical, 8)
+            
+            // Sign Up Link
+            HStack {
+                Text("Don't have an account?")
+                    .foregroundColor(.white.opacity(0.7))
+                
+                Button("Sign Up") {
+                    onSignUpTapped()
+                }
+                .foregroundColor(.white)
+                .fontWeight(.semibold)
+                .disabled(authManager.isLoading)
+            }
+            .font(.footnote)
+            .padding(.bottom, 32)
+        }
+    }
 }
 
 // MARK: - Private Methods
@@ -226,6 +269,13 @@ private extension LoginView {
         email = ""
         password = ""
         isPasswordVisible = false
+    }
+}
+
+// MARK: - Convenience Initializer for Previews
+extension LoginView {
+    init() {
+        self.onSignUpTapped = {}
     }
 }
 
