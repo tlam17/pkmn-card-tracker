@@ -8,6 +8,10 @@
 import SwiftUI
 
 struct SignupView: View {
+    
+    // MARK: - Navigation Callback
+    let onLoginTapped: () -> Void
+    
     // MARK: - State Properties
     @State private var name = ""
     @State private var email = ""
@@ -19,32 +23,6 @@ struct SignupView: View {
     
     // MARK: - Authentication Manager
     @StateObject private var authManager = AuthenticationManager.shared
-    
-    // MARK: - Password Validation Properties
-    private var passwordRequirements: [PasswordRequirement] {
-        [
-            PasswordRequirement(
-                text: "At least 8 characters",
-                isMet: password.count >= Config.Validation.Auth.passwordMinLength
-            ),
-            PasswordRequirement(
-                text: "One uppercase letter (A-Z)",
-                isMet: password.range(of: "[A-Z]", options: .regularExpression) != nil
-            ),
-            PasswordRequirement(
-                text: "One lowercase letter (a-z)",
-                isMet: password.range(of: "[a-z]", options: .regularExpression) != nil
-            ),
-            PasswordRequirement(
-                text: "One number (0-9)",
-                isMet: password.range(of: "[0-9]", options: .regularExpression) != nil
-            ),
-            PasswordRequirement(
-                text: "One special character (@$!%*?&)",
-                isMet: password.range(of: "[@$!%*?&]", options: .regularExpression) != nil
-            )
-        ]
-    }
     
     // MARK: - Computed Properties
     private var isFormValid: Bool {
@@ -79,11 +57,8 @@ struct SignupView: View {
     }
     
     private var isPasswordStrong: Bool {
-        passwordRequirements.allSatisfy { $0.isMet }
-    }
-    
-    private var passwordsMatch: Bool {
-        !confirmPassword.isEmpty && password == confirmPassword
+        let passwordRegex = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]+$"
+        return NSPredicate(format: "SELF MATCHES %@", passwordRegex).evaluate(with: password)
     }
     
     var body: some View {
@@ -127,6 +102,9 @@ struct SignupView: View {
                         // Signup Button
                         signupButton
                         
+                        // Divider and Login Link
+                        bottomSection
+                        
                         Spacer(minLength: 32)
                     }
                 }
@@ -165,30 +143,30 @@ private extension SignupView {
     
     var titleSection: some View {
         VStack(spacing: 16) {
+            // Smaller logo
             ZStack {
-                    Circle()
-                        .fill(Color.white.opacity(0.2))
-                        .frame(width: 80, height: 80)
-                        .overlay(
-                            Circle()
-                                .stroke(Color.white.opacity(0.3), lineWidth: 2)
-                        )
-                    
-                    Image(systemName: "rectangle.stack.fill")
-                        .font(.system(size: 32))
-                        .foregroundColor(.white)
-                }
-                .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
-            VStack(spacing: 16) {
-                VStack(spacing: 4) {
-                    Text("Create Account")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                }
+                Circle()
+                    .fill(Color.white.opacity(0.2))
+                    .frame(width: 70, height: 70)
+                    .overlay(
+                        Circle()
+                            .stroke(Color.white.opacity(0.3), lineWidth: 2)
+                    )
+                
+                Image(systemName: "rectangle.stack.fill")
+                    .font(.system(size: 32))
+                    .foregroundColor(.white)
             }
-            .padding(.bottom, 40)
+            .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
+            
+            VStack(spacing: 4) {
+                Text("Create Account")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+            }
         }
+        .padding(.bottom, 32)
     }
     
     var signupForm: some View {
@@ -216,120 +194,36 @@ private extension SignupView {
                 isDisabled: authManager.isLoading
             )
             
-            // Password Field with Requirements
-            VStack(spacing: 12) {
-                AuthTextFieldView(
-                    title: "Password",
-                    placeholder: "Enter your password",
-                    iconName: "lock",
-                    text: $password,
-                    isPasswordVisible: $isPasswordVisible,
-                    textContentType: .newPassword,
-                    isDisabled: authManager.isLoading,
-                    onPasswordVisibilityToggle: {
-                        isPasswordVisible.toggle()
-                    }
-                )
-                
-                // Password Requirements Display
-                if !password.isEmpty {
-                    passwordRequirementsView
+            // Password Field
+            AuthTextFieldView(
+                title: "Password",
+                placeholder: "Enter your password",
+                iconName: "lock",
+                text: $password,
+                isPasswordVisible: $isPasswordVisible,
+                textContentType: .newPassword,
+                isDisabled: authManager.isLoading,
+                onPasswordVisibilityToggle: {
+                    isPasswordVisible.toggle()
                 }
-            }
+            )
             
-            // Confirm Password Field
-            VStack(spacing: 8) {
-                AuthTextFieldView(
-                    title: "Confirm Password",
-                    placeholder: "Confirm your password",
-                    iconName: "lock",
-                    text: $confirmPassword,
-                    isPasswordVisible: $isConfirmPasswordVisible,
-                    textContentType: .newPassword,
-                    isDisabled: authManager.isLoading,
-                    onPasswordVisibilityToggle: {
-                        isConfirmPasswordVisible.toggle()
-                    }
-                )
-                
-                // Password Match Indicator
-                if !confirmPassword.isEmpty {
-                    passwordMatchIndicator
+            // Confirm Password
+            AuthTextFieldView(
+                title: "Confirm Password",
+                placeholder: "Confirm your password",
+                iconName: "lock",
+                text: $confirmPassword,
+                isPasswordVisible: $isConfirmPasswordVisible,
+                textContentType: .newPassword,
+                isDisabled: authManager.isLoading,
+                onPasswordVisibilityToggle: {
+                    isConfirmPasswordVisible.toggle()
                 }
-            }
+            )
         }
         .padding(.horizontal, 32)
         .padding(.bottom, 32)
-    }
-    
-    var passwordRequirementsView: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Password Requirements")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white.opacity(0.9))
-                Spacer()
-            }
-            
-            LazyVGrid(columns: [
-                GridItem(.flexible(), alignment: .leading),
-                GridItem(.flexible(), alignment: .leading)
-            ], spacing: 6) {
-                ForEach(passwordRequirements, id: \.text) { requirement in
-                    HStack(spacing: 8) {
-                        Image(systemName: requirement.isMet ? "checkmark.circle.fill" : "circle")
-                            .font(.system(size: 12))
-                            .foregroundColor(requirement.isMet ? .green : .white.opacity(0.5))
-                        
-                        Text(requirement.text)
-                            .font(.caption2)
-                            .foregroundColor(requirement.isMet ? .white : .white.opacity(0.7))
-                            .lineLimit(2)
-                        
-                        Spacer()
-                    }
-                }
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.white.opacity(0.1))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                )
-        )
-        .transition(.opacity.combined(with: .scale))
-        .animation(.easeInOut(duration: 0.2), value: passwordRequirements.map { $0.isMet })
-    }
-    
-    var passwordMatchIndicator: some View {
-        HStack(spacing: 8) {
-            Image(systemName: passwordsMatch ? "checkmark.circle.fill" : "xmark.circle.fill")
-                .font(.system(size: 12))
-                .foregroundColor(passwordsMatch ? .green : .red)
-            
-            Text(passwordsMatch ? "Passwords match" : "Passwords don't match")
-                .font(.caption2)
-                .foregroundColor(passwordsMatch ? .white : .red.opacity(0.8))
-            
-            Spacer()
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(passwordsMatch ? Color.green.opacity(0.15) : Color.red.opacity(0.15))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(passwordsMatch ? Color.green.opacity(0.3) : Color.red.opacity(0.3), lineWidth: 1)
-                )
-        )
-        .transition(.opacity.combined(with: .scale))
-        .animation(.easeInOut(duration: 0.2), value: passwordsMatch)
     }
     
     var signupButton: some View {
@@ -345,6 +239,44 @@ private extension SignupView {
             .padding(.horizontal, 32)
         }
         .padding(.bottom, 32)
+    }
+    
+    var bottomSection: some View {
+        VStack(spacing: 16) {
+            // Divider
+            HStack {
+                Rectangle()
+                    .fill(Color.white.opacity(0.3))
+                    .frame(height: 1)
+                
+                Text("or")
+                    .font(.footnote)
+                    .foregroundColor(.white.opacity(0.7))
+                    .padding(.horizontal, 16)
+                
+                Rectangle()
+                    .fill(Color.white.opacity(0.3))
+                    .frame(height: 1)
+            }
+            .padding(.horizontal, 32)
+            .padding(.vertical, 8)
+            
+            // Login Link
+            HStack {
+                Text("Already have an account?")
+                    .foregroundColor(.white.opacity(0.7))
+                
+                Button("Login") {
+                    // Navigate to login
+                    onLoginTapped()
+                }
+                .foregroundColor(.white)
+                .fontWeight(.semibold)
+                .disabled(authManager.isLoading)
+            }
+            .font(.footnote)
+            .padding(.bottom, 32)
+        }
     }
 }
 
@@ -384,10 +316,11 @@ private extension SignupView {
     }
 }
 
-// MARK: - Helper Types
-private struct PasswordRequirement {
-    let text: String
-    let isMet: Bool
+// MARK: - Convenience Initializer for Previews
+extension SignupView {
+    init() {
+        self.onLoginTapped = {}
+    }
 }
 
 struct SignupView_Previews: PreviewProvider {
