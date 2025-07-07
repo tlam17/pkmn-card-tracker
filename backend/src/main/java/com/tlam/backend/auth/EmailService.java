@@ -53,7 +53,8 @@ public class EmailService {
 
     // Build the email content for the welcome email
     private String buildWelcomeEmailHTML(User user) {
-        return """
+        // Use String.replace() instead of formatted() to avoid issues with CSS semicolons
+        String template = """
             <!DOCTYPE html>
             <html lang="en">
             <head>
@@ -169,7 +170,7 @@ public class EmailService {
                     </div>
                     
                     <div class="content">
-                        <p class="greeting">Hi %s!</p>
+                        <p class="greeting">Hi {{USER_NAME}}!</p>
                         
                         <p>We're thrilled to have you join the PokéCollect community! Your account has been successfully created, and you're now ready to start building and tracking your Pokémon card collection.</p>
                         
@@ -206,12 +207,17 @@ public class EmailService {
                     </div>
                     
                     <div class="footer">
-                        <p>This email was sent to %s because you signed up for PokéCollect.</p>
+                        <p>This email was sent to {{USER_EMAIL}} because you signed up for PokéCollect.</p>
                         <p>© 2025 PokéCollect. All rights reserved.</p>
                     </div>
                 </div>
             </body>
             </html>
-            """.formatted(user.getName(), user.getEmail());
+            """;
+
+        // Replace placeholders with actual values
+        return template
+            .replace("{{USER_NAME}}", user.getName())
+            .replace("{{USER_EMAIL}}", user.getEmail());
     }
 }
