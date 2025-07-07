@@ -10,6 +10,7 @@ import SwiftUI
 enum AuthenticationFlow {
     case login
     case signup
+    case forgotPassword
 }
 
 struct AuthenticationView: View {
@@ -29,6 +30,12 @@ struct AuthenticationView: View {
                     SignupView(onLoginTapped: {
                         withAnimation(.easeInOut(duration: 0.3)) {
                             currentFlow = .login
+                        }
+                    })
+                case .forgotPassword:
+                    ForgotPasswordView(onForgotPasswordTapped: {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            currentFlow = .forgotPassword
                         }
                     })
                 }
