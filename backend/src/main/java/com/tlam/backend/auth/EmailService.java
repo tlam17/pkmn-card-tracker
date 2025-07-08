@@ -51,6 +51,30 @@ public class EmailService {
         }
     }
 
+    // Send a password reset email to the user
+    public boolean sendPasswordResetEmail(String email, String code) {
+        try {
+            log.info("Sending password reset email to: {}", email);
+
+            CreateEmailOptions params = CreateEmailOptions.builder()
+                .from(fromEmail)
+                .to(email)
+                .subject("Password Reset Request")
+                .html(buildPasswordResetEmailHTML(email, code))
+                .build();
+
+            CreateEmailResponse data = resend.emails().send(params);
+            log.info("Password reset email sent successfully to {}: {}", email, data.getId());
+            return true;
+        } catch (ResendException e) {
+            log.error("Failed to send password reset email to {}: {}", email, e.getMessage());
+            return false;
+        } catch (Exception e) {
+            log.error("Unexpected error while sending password reset email to {}: {}", email, e.getMessage());
+            return false;
+        }
+    }
+
     // Build the email content for the welcome email
     private String buildWelcomeEmailHTML(User user) {
         // Use String.replace() instead of formatted() to avoid issues with CSS semicolons
@@ -107,5 +131,60 @@ public class EmailService {
         return template
             .replace("{{USER_NAME}}", user.getName())
             .replace("{{USER_EMAIL}}", user.getEmail());
+    }
+
+    // Build the email content for the password reset email
+    private String buildPasswordResetEmailHTML(String email, String code) {
+        String template = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+            <meta charset="UTF-8">
+            <title>Password Reset Request</title>
+            </head>
+            <body style="font-family: Arial, sans-serif; background-color: #f8f9fa; margin: 0; padding: 0;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                <td align="center" style="padding: 20px;">
+                    <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                    <tr style="background-color: #f59e0b;">
+                        <td style="padding: 20px; text-align: center; color: #ffffff; font-size: 24px;">
+                        Pokémon Card Collection Tracker – Password Reset
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 30px;">
+                        <p style="font-size: 16px; color: #333333;">Hi,</p>
+                        <p style="font-size: 16px; color: #333333;">
+                            We received a request to reset the password associated with <strong>%s</strong>.
+                        </p>
+                        <p style="font-size: 16px; color: #333333;">
+                            Use the code below to reset your password:
+                        </p>
+                        <p style="font-size: 24px; color: #10b981; font-weight: bold; text-align: center; letter-spacing: 2px;">
+                            %s
+                        </p>
+                        <p style="font-size: 16px; color: #333333;">
+                            If you didn’t request a password reset, you can safely ignore this email.
+                        </p>
+                        <p style="font-size: 16px; color: #333333;">
+                            Stay secure,<br/>– The Tracker Team
+                        </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color: #f1f1f1; padding: 20px; text-align: center; font-size: 12px; color: #666666;">
+                        This password reset code will expire in 15 minutes.
+                        </td>
+                    </tr>
+                    </table>
+                </td>
+                </tr>
+            </table>
+            </body>
+            </html>
+            """;
+
+        return String.format(template, email, code);
     }
 }
