@@ -2,6 +2,7 @@ package com.tlam.backend.auth;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -74,7 +75,27 @@ public class PasswordResetService {
     }
 
     // Validate the code against the stored code
-    // public boolean validateResetCode(String email, String code) {}
+    public boolean validateResetCode(String email, String code) {
+        try {
+            String normalizedEmail = email.toLowerCase().trim();
+            LocalDateTime now = LocalDateTime.now();
+
+            // Check if the code exists and is valid
+            Optional<PasswordResetCode> resetCodeOpt = passwordResetCodeRepository
+                    .findByEmailAndCodeAndIsUsedFalseAndExpiresAtAfter(normalizedEmail, code, now);
+            
+            if (resetCodeOpt.isPresent()) {
+                log.info("Valid password reset code for user: {}", normalizedEmail);
+                return true;
+            } else {
+                log.warn("Invalid or expired password reset code for user: {}", normalizedEmail);
+                return false;
+            }
+        } catch (Exception ex) {
+            log.error("Unexpected error during reset code validation for email: {}", email, ex);
+            return false;
+        }
+    }
 
     // // Change the user's password if the code is valid
     // public void resetPassword(String email, String code, String newPassword) {}
