@@ -185,6 +185,8 @@ public class EmailService {
             </html>
             """;
 
-        return String.format(template, email, code);
+        return template
+            .replace("{{EMAIL}}", email)
+            .replace("{{CODE}}", code);
     }
 }
