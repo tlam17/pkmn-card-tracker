@@ -147,7 +147,7 @@ public class EmailService {
                 <tr>
                 <td align="center" style="padding: 20px;">
                     <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-                    <tr style="background-color: #f59e0b;">
+                    <tr style="background-color: #10b981;">
                         <td style="padding: 20px; text-align: center; color: #ffffff; font-size: 24px;">
                         Pokémon Card Collection Tracker – Password Reset
                         </td>
@@ -156,13 +156,13 @@ public class EmailService {
                         <td style="padding: 30px;">
                         <p style="font-size: 16px; color: #333333;">Hi,</p>
                         <p style="font-size: 16px; color: #333333;">
-                            We received a request to reset the password associated with <strong>%s</strong>.
+                            We received a request to reset the password associated with <strong>{{EMAIL}}</strong>.
                         </p>
                         <p style="font-size: 16px; color: #333333;">
                             Use the code below to reset your password:
                         </p>
-                        <p style="font-size: 24px; color: #10b981; font-weight: bold; text-align: center; letter-spacing: 2px;">
-                            %s
+                        <p style="font-size: 24px; color: #f59e0b; font-weight: bold; text-align: center; letter-spacing: 2px;">
+                            <strong>{{CODE}}</strong>
                         </p>
                         <p style="font-size: 16px; color: #333333;">
                             If you didn’t request a password reset, you can safely ignore this email.
