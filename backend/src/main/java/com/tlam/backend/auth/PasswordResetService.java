@@ -5,11 +5,14 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.tlam.backend.exception.AuthenticationException;
 import com.tlam.backend.passwordreset.PasswordResetCode;
 import com.tlam.backend.passwordreset.PasswordResetCodeRepository;
+import com.tlam.backend.user.User;
 import com.tlam.backend.user.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -29,6 +32,7 @@ public class PasswordResetService {
 
     private final PasswordResetCodeRepository passwordResetCodeRepository;
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
 
     // Secure random for code generation
@@ -97,8 +101,48 @@ public class PasswordResetService {
         }
     }
 
-    // // Change the user's password if the code is valid
-    // public void resetPassword(String email, String code, String newPassword) {}
+    // Change the user's password if the code is valid
+    public void resetPassword(String email, String code, String newPassword) {
+        try {
+            String normalizedEmail = email.toLowerCase().trim();
+            LocalDateTime now = LocalDateTime.now();
+
+            // Find the reset code
+            Optional<PasswordResetCode> resetCodeOpt = passwordResetCodeRepository
+                    .findByEmailAndCodeAndIsUsedFalseAndExpiresAtAfter(normalizedEmail, code, now);
+
+            if (!resetCodeOpt.isPresent()) {
+                log.warn("Invalid or expired reset code for password reset attempt: {}", normalizedEmail);
+                throw new AuthenticationException("Invalid or expired reset code", 
+                    HttpStatus.BAD_REQUEST, "Password Reset Failed");
+            }
+
+            // Find the user
+            User user = userRepository.findByEmail(normalizedEmail)
+                .orElseThrow(() -> {
+                    log.error("User not found during password reset: {}", normalizedEmail);
+                    return new AuthenticationException("User not found", 
+                        HttpStatus.NOT_FOUND, "Password Reset Failed");
+                });
+            
+            // Mark the reset code as used
+            PasswordResetCode resetCode = resetCodeOpt.get();
+            resetCode.setIsUsed(true);
+            passwordResetCodeRepository.save(resetCode);
+
+            // Update the user's password
+            user.setPassword(passwordEncoder.encode(newPassword));
+            userRepository.save(user);
+
+            passwordResetCodeRepository.markAllCodesAsUsedForEmail(normalizedEmail);
+            log.info("Password reset successfully for user: {}", normalizedEmail);
+        } catch (AuthenticationException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("Unexpected error during password reset for email: {}", email, ex);
+            throw new RuntimeException("Failed to reset password due to an unexpected error");
+        }
+    }
 
     // // Clean up expired codes
     // public void cleanupExpiredCodes() {}
