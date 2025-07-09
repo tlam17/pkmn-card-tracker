@@ -20,6 +20,7 @@ struct Config {
             static let auth = "/api/auth"
             static let login = "\(auth)/login"
             static let register = "\(auth)/register"
+            static let forgotPassword = "\(auth)/forgot-password"
             static let test = "/api/test"
         }
     }
@@ -52,6 +53,11 @@ extension Config.API.Endpoints {
     /// Get full URL for register endpoint
     static var registerURL: String {
         return Config.API.baseURL + register
+    }
+    
+    /// Get full URL for forgot password endpoint
+    static var forgotPasswordURL: String {
+        return Config.API.baseURL + forgotPassword
     }
     
     /// Get full URL for test endpoint
