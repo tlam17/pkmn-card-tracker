@@ -21,11 +21,18 @@ struct AuthenticationView: View {
             Group {
                 switch currentFlow {
                 case .login:
-                    LoginView(onSignUpTapped: {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            currentFlow = .signup
+                    LoginView(
+                        onSignUpTapped: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                currentFlow = .signup
+                            }
+                        },
+                        onForgotPasswordTapped: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                currentFlow = .forgotPassword
+                            }
                         }
-                    })
+                    )
                 case .signup:
                     SignupView(onLoginTapped: {
                         withAnimation(.easeInOut(duration: 0.3)) {
@@ -33,9 +40,9 @@ struct AuthenticationView: View {
                         }
                     })
                 case .forgotPassword:
-                    ForgotPasswordView(onForgotPasswordTapped: {
+                    ForgotPasswordView(onBackToLogin: {
                         withAnimation(.easeInOut(duration: 0.3)) {
-                            currentFlow = .forgotPassword
+                            currentFlow = .login
                         }
                     })
                 }
