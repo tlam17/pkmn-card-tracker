@@ -24,32 +24,6 @@ struct SignupView: View {
     // MARK: - Authentication Manager
     @StateObject private var authManager = AuthenticationManager.shared
     
-    // MARK: - Password Validation Properties
-    private var passwordRequirements: [PasswordRequirement] {
-        [
-            PasswordRequirement(
-                text: "At least 8 characters",
-                isMet: password.count >= Config.Validation.Auth.passwordMinLength
-            ),
-            PasswordRequirement(
-                text: "One uppercase letter (A-Z)",
-                isMet: password.range(of: "[A-Z]", options: .regularExpression) != nil
-            ),
-            PasswordRequirement(
-                text: "One lowercase letter (a-z)",
-                isMet: password.range(of: "[a-z]", options: .regularExpression) != nil
-            ),
-            PasswordRequirement(
-                text: "One number (0-9)",
-                isMet: password.range(of: "[0-9]", options: .regularExpression) != nil
-            ),
-            PasswordRequirement(
-                text: "One special character (@$!%*?&)",
-                isMet: password.range(of: "[@$!%*?&]", options: .regularExpression) != nil
-            )
-        ]
-    }
-    
     // MARK: - Computed Properties
     private var isFormValid: Bool {
         // Name validation
@@ -65,31 +39,18 @@ struct SignupView: View {
                           trimmedEmail.contains(".") &&
                           trimmedEmail.count <= Config.Validation.Auth.emailMaxLength
         
-        // Password validation
-        let isPasswordValid = password.count >= Config.Validation.Auth.passwordMinLength &&
-                             password.count <= Config.Validation.Auth.passwordMaxLength &&
-                             !password.isEmpty &&
-                             isPasswordStrong
-        
-        // Confirm password validation
-        let isConfirmPasswordValid = !confirmPassword.isEmpty &&
-                                    password == confirmPassword
+        // Password validation using the new component
+        let passwordValidation = PasswordValidationView.passwordWithConfirmation(
+            password: password,
+            confirmPassword: confirmPassword
+        )
         
         // All conditions must be true
         return isNameValid &&
                isEmailValid &&
-               isPasswordValid &&
-               isConfirmPasswordValid
-    }
-    
-    private var isPasswordStrong: Bool {
-        passwordRequirements.allSatisfy { $0.isMet }
+               passwordValidation.isFormValid
     }
         
-    private var passwordsMatch: Bool {
-        !confirmPassword.isEmpty && password == confirmPassword
-    }
-    
     var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -205,7 +166,7 @@ private extension SignupView {
                 isDisabled: authManager.isLoading
             )
             
-            // Password Field
+            // Password Field with Validation
             VStack(spacing: 12) {
                 AuthTextFieldView(
                     title: "Password",
@@ -220,13 +181,11 @@ private extension SignupView {
                     }
                 )
                 
-                // Password Requirements Display
-                if !password.isEmpty {
-                    passwordValidationView
-                }
+                // Password validation display using reusable component
+                PasswordValidationView.passwordStrength(password: password)
             }
             
-            // Confirm Password
+            // Confirm Password with Match Validation
             VStack(spacing: 8) {
                 AuthTextFieldView(
                     title: "Confirm Password",
@@ -241,129 +200,15 @@ private extension SignupView {
                     }
                 )
                 
-                // Password Match Indicator
-                if !confirmPassword.isEmpty {
-                    passwordMatchIndicator
-                }
+                // Password match indicator using reusable component
+                PasswordMatchIndicatorView(
+                    password: password,
+                    confirmPassword: confirmPassword
+                )
             }
         }
         .padding(.horizontal, 32)
         .padding(.bottom, 32)
-    }
-    
-    var passwordValidationView: some View {
-        Group {
-            if isPasswordStrong {
-                // Show "Valid password" when all requirements are met
-                validPasswordIndicator
-            } else {
-                // Show detailed requirements when password is not yet valid
-                passwordRequirementsView
-            }
-        }
-    }
-    
-    var validPasswordIndicator: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 16))
-                .foregroundColor(.green)
-            
-            Text("Valid password")
-                .font(.callout)
-                .fontWeight(.medium)
-                .foregroundColor(.white)
-            
-            Spacer()
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.green.opacity(0.2))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.green.opacity(0.4), lineWidth: 1)
-                )
-        )
-        .transition(.asymmetric(
-            insertion: .opacity.combined(with: .scale),
-            removal: .opacity.combined(with: .scale)
-        ))
-        .animation(.easeInOut(duration: 0.3), value: isPasswordStrong)
-    }
-    
-    var passwordRequirementsView: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Password Requirements")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white.opacity(0.9))
-                Spacer()
-            }
-            
-            LazyVGrid(columns: [
-                GridItem(.flexible(), alignment: .leading),
-                GridItem(.flexible(), alignment: .leading)
-            ], spacing: 6) {
-                ForEach(passwordRequirements, id: \.text) { requirement in
-                    HStack(spacing: 8) {
-                        Image(systemName: requirement.isMet ? "checkmark.circle.fill" : "circle")
-                            .font(.system(size: 12))
-                            .foregroundColor(requirement.isMet ? .green : .white.opacity(0.5))
-                        
-                        Text(requirement.text)
-                            .font(.caption2)
-                            .foregroundColor(requirement.isMet ? .white : .white.opacity(0.7))
-                            .lineLimit(2)
-                        
-                        Spacer()
-                    }
-                }
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.white.opacity(0.1))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                )
-        )
-        .transition(.asymmetric(
-            insertion: .opacity.combined(with: .scale),
-            removal: .opacity.combined(with: .scale)
-        ))
-        .animation(.easeInOut(duration: 0.3), value: passwordRequirements.map { $0.isMet })
-    }
-    
-    var passwordMatchIndicator: some View {
-        HStack(spacing: 8) {
-            Image(systemName: passwordsMatch ? "checkmark.circle.fill" : "xmark.circle.fill")
-                .font(.system(size: 12))
-                .foregroundColor(passwordsMatch ? .green : .red)
-            
-            Text(passwordsMatch ? "Passwords match" : "Passwords don't match")
-                .font(.caption2)
-                .foregroundColor(passwordsMatch ? .white : .red.opacity(0.8))
-            
-            Spacer()
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(passwordsMatch ? Color.green.opacity(0.15) : Color.red.opacity(0.15))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(passwordsMatch ? Color.green.opacity(0.3) : Color.red.opacity(0.3), lineWidth: 1)
-                )
-        )
-        .transition(.opacity.combined(with: .scale))
-        .animation(.easeInOut(duration: 0.2), value: passwordsMatch)
     }
     
     var signupButton: some View {
@@ -454,12 +299,6 @@ private extension SignupView {
         isPasswordVisible = false
         isConfirmPasswordVisible = false
     }
-}
-
-// MARK: - Helper Types
-private struct PasswordRequirement {
-    let text: String
-    let isMet: Bool
 }
 
 // MARK: - Convenience Initializer for Previews
