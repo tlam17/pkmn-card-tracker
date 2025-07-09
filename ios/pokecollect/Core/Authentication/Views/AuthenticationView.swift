@@ -12,6 +12,7 @@ enum AuthenticationFlow {
     case signup
     case forgotPassword
     case codeVerification(email: String)
+    case newPassword(email: String, code: String)
 }
 
 struct AuthenticationView: View {
@@ -62,9 +63,21 @@ struct AuthenticationView: View {
                             }
                         },
                         onCodeVerified: { email, code in
-                            // TODO: Navigate to password reset screen
-                            print("Code verified for \(email): \(code)")
-                            // For now, go back to login
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                currentFlow = .newPassword(email: email, code: code)
+                            }
+                        }
+                    )
+                case .newPassword(let email, let code):
+                    NewPasswordView(
+                        email: email,
+                        code: code,
+                        onBackToCodeVerification: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                currentFlow = .codeVerification(email: email)
+                            }
+                        },
+                        onPasswordResetSuccess: {
                             withAnimation(.easeInOut(duration: 0.3)) {
                                 currentFlow = .login
                             }
