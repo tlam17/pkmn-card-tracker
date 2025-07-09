@@ -80,6 +80,9 @@ struct ForgotPasswordView: View {
                         // Instructions
                         instructionsSection
                         
+                        // Back to Login Link
+                        backToLoginSection
+                        
                         Spacer(minLength: 32)
                     }
                 }
@@ -269,6 +272,43 @@ private extension ForgotPasswordView {
         }
     }
     
+    var backToLoginSection: some View {
+        VStack(spacing: 16) {
+            // Divider
+            HStack {
+                Rectangle()
+                    .fill(Color.white.opacity(0.3))
+                    .frame(height: 1)
+                
+                Text("or")
+                    .font(.footnote)
+                    .foregroundColor(.white.opacity(0.7))
+                    .padding(.horizontal, 16)
+                
+                Rectangle()
+                    .fill(Color.white.opacity(0.3))
+                    .frame(height: 1)
+            }
+            .padding(.horizontal, 32)
+            .padding(.vertical, 8)
+            
+            // Back to Login Link
+            HStack {
+                Text("Remember your password?")
+                    .foregroundColor(.white.opacity(0.7))
+                
+                Button("Sign In") {
+                    onBackToLogin()
+                }
+                .foregroundColor(.white)
+                .fontWeight(.semibold)
+                .disabled(isLoading)
+            }
+            .font(.footnote)
+            .padding(.bottom, 32)
+        }
+    }
+    
     func successMessageView(message: String) -> some View {
         VStack {
             HStack {
@@ -317,21 +357,56 @@ private extension ForgotPasswordView {
         // Start loading
         isLoading = true
         
-        // Simulate API call delay (replace with actual API call later)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            isLoading = false
-            
-            // Simulate success response
-            successMessage = "If an account with that email exists, we've sent you a reset code."
-            showingSuccessAlert = true
-            
-            // Clear email for security
-            email = ""
-            
-            print("Password reset code sent to: \(email)")
-            
-            // TODO: Navigate to code verification screen
-            // For now, just show success message
+        // Make actual API call to backend
+        Task {
+            do {
+                // Create forgot password request
+                let forgotPasswordRequest = ForgotPasswordRequest(email: email.lowercased().trimmingCharacters(in: .whitespacesAndNewlines))
+                
+                // Call the backend API
+                let response: SuccessResponse = try await NetworkService.shared.post(
+                    endpoint: Config.API.Endpoints.forgotPassword,
+                    body: forgotPasswordRequest,
+                    responseType: SuccessResponse.self
+                )
+                
+                // Handle successful response
+                await MainActor.run {
+                    isLoading = false
+                    successMessage = response.message
+                    showingSuccessAlert = true
+                    
+                    // Clear email for security
+                    email = ""
+                    
+                    print("Password reset request successful: \(response.message)")
+                }
+                
+            } catch {
+                // Handle API errors
+                await MainActor.run {
+                    isLoading = false
+                    handleForgotPasswordError(error)
+                    print("Password reset request failed: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    func handleForgotPasswordError(_ error: Error) {
+        switch error {
+        case APIError.serverError(let code, let message):
+            if code == 400 {
+                errorMessage = "Please check your email address and try again."
+            } else {
+                errorMessage = message ?? "Server error occurred. Please try again later."
+            }
+        case APIError.networkError:
+            errorMessage = "Network connection failed. Please check your internet connection."
+        case APIError.timeout:
+            errorMessage = "Request timed out. Please try again."
+        default:
+            errorMessage = "An unexpected error occurred. Please try again."
         }
     }
 }
