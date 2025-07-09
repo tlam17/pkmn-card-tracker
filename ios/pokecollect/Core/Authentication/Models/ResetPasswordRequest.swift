@@ -10,5 +10,5 @@ import Foundation
 struct ResetPasswordRequest: Codable {
     let email: String
     let code: String
-    let password: String
+    let newPassword: String
 }
