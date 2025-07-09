@@ -131,4 +131,56 @@ public class PasswordResetController {
             throw ex; // Let the GlobalExceptionHandler handle it
         }
     }
+
+    @Operation(summary = "Reset password", description = "Resets the user's password using the provided reset code.")
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Password reset successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = String.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Invalid reset code or password format",
+            content = @Content(mediaType = "application/json")
+        ),
+        @ApiResponse(
+            responseCode = "404",
+            description = "User not found for the provided email",
+            content = @Content(mediaType = "application/json")
+        )
+    })
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(
+        @Valid
+        @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            description = "Email, reset code, and new password for resetting the password",
+            required = true,
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ResetPasswordRequest.class),
+                examples = @ExampleObject(
+                    value = "{ \"email\": \"user@example.com\", \"code\": \"123456\", \"newPassword\": \"NewPassword123!\" }"
+                )
+            )
+        )
+        @RequestBody ResetPasswordRequest request
+    ) {
+        try {
+            log.info("Resetting password for email: {}", request.getEmail());
+            
+            // Call the service to reset the password
+            passwordResetService.resetPassword(request.getEmail(), request.getCode(), request.getNewPassword());
+            
+            log.info("Password reset successfully for email: {}", request.getEmail());
+            return ResponseEntity.ok("Password has been reset successfully.");
+        } catch (Exception ex) {
+            log.error("Error resetting password for email: {}", request.getEmail(), ex);
+            throw ex; // Let the GlobalExceptionHandler handle it
+        }
+    }
+    
 }
