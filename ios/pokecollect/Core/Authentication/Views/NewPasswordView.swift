@@ -26,15 +26,16 @@ struct NewPasswordView: View {
     @State private var showingSuccessAlert = false
     
     // MARK: - Computed Properties
-    private var passwordValidation: PasswordValidationView {
-        PasswordValidationView.passwordWithConfirmation(
-            password: newPassword,
-            confirmPassword: confirmPassword
-        )
+    private var isPasswordValid: Bool {
+        PasswordRequirementsGenerator.isPasswordStrong(newPassword)
+    }
+    
+    private var passwordsMatch: Bool {
+        !confirmPassword.isEmpty && newPassword == confirmPassword
     }
     
     private var isFormValid: Bool {
-        passwordValidation.isFormValid && !newPassword.isEmpty
+        isPasswordValid && passwordsMatch && !newPassword.isEmpty
     }
     
     var body: some View {
@@ -218,10 +219,13 @@ private extension NewPasswordView {
                         isNewPasswordVisible.toggle()
                     }
                 )
+                
+                // Password validation display - appears right after password field
+                PasswordValidationView.passwordStrength(password: newPassword)
             }
             
-            // Confirm Password Field
-            VStack(spacing: 12) {
+            // Confirm Password Field with Match Validation
+            VStack(spacing: 8) {
                 AuthTextFieldView(
                     title: "Confirm New Password",
                     placeholder: "Confirm your new password",
@@ -234,10 +238,13 @@ private extension NewPasswordView {
                         isConfirmPasswordVisible.toggle()
                     }
                 )
+                
+                // Password match indicator - appears right after confirm password field
+                PasswordMatchIndicatorView(
+                    password: newPassword,
+                    confirmPassword: confirmPassword
+                )
             }
-            
-            // Password Validation Display
-            passwordValidation
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 32)
