@@ -11,6 +11,7 @@ enum AuthenticationFlow {
     case login
     case signup
     case forgotPassword
+    case codeVerification(email: String)
 }
 
 struct AuthenticationView: View {
@@ -40,11 +41,35 @@ struct AuthenticationView: View {
                         }
                     })
                 case .forgotPassword:
-                    ForgotPasswordView(onBackToLogin: {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            currentFlow = .login
+                    ForgotPasswordView(
+                        onBackToLogin: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                currentFlow = .login
+                            }
+                        },
+                        onCodeSent: { email in
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                currentFlow = .codeVerification(email: email)
+                            }
                         }
-                    })
+                    )
+                case .codeVerification(let email):
+                    CodeVerificationView(
+                        email: email,
+                        onBackToForgotPassword: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                currentFlow = .forgotPassword
+                            }
+                        },
+                        onCodeVerified: { email, code in
+                            // TODO: Navigate to password reset screen
+                            print("Code verified for \(email): \(code)")
+                            // For now, go back to login
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                currentFlow = .login
+                            }
+                        }
+                    )
                 }
             }
             .transition(.asymmetric(

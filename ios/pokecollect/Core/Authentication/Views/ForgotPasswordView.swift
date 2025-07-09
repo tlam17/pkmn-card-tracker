@@ -9,8 +9,9 @@ import SwiftUI
 
 struct ForgotPasswordView: View {
     
-    // MARK: - Navigation Callback
+    // MARK: - Navigation Callbacks
     let onBackToLogin: () -> Void
+    let onCodeSent: (String) -> Void
     
     // MARK: - State Properties
     @State private var email = ""
@@ -93,7 +94,7 @@ struct ForgotPasswordView: View {
         .alert("Code Sent Successfully", isPresented: $showingSuccessAlert) {
             Button("OK") { }
         } message: {
-            Text("A 6-digit reset code has been sent to your email address. Please check your inbox and spam folder.")
+            Text("A 6-digit reset code has been sent to your email address. You'll be redirected to enter the code shortly.")
         }
     }
 }
@@ -376,10 +377,18 @@ private extension ForgotPasswordView {
                     successMessage = response.message
                     showingSuccessAlert = true
                     
+                    // Store email for navigation
+                    let emailForNavigation = email
+                    
                     // Clear email for security
                     email = ""
                     
                     print("Password reset request successful: \(response.message)")
+                    
+                    // Navigate to code verification after a short delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        onCodeSent(emailForNavigation)
+                    }
                 }
                 
             } catch {
@@ -415,6 +424,7 @@ private extension ForgotPasswordView {
 extension ForgotPasswordView {
     init() {
         self.onBackToLogin = {}
+        self.onCodeSent = { _ in }
     }
 }
 
