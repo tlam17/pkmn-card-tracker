@@ -88,9 +88,6 @@ struct NewPasswordView: View {
                             // Reset Password Button
                             resetPasswordButton
                             
-                            // Security Tips Section
-                            securityTipsSection
-                            
                             Spacer(minLength: 32)
                         }
                         .frame(maxWidth: .infinity)
@@ -261,65 +258,6 @@ private extension NewPasswordView {
         .padding(.bottom, 32)
     }
     
-    var securityTipsSection: some View {
-        VStack(spacing: 12) {
-            Text("Security Tips")
-                .font(.callout)
-                .fontWeight(.medium)
-                .foregroundColor(.white)
-            
-            VStack(spacing: 8) {
-                securityTipRow(
-                    icon: "shield.fill",
-                    text: "Use a unique password you haven't used elsewhere"
-                )
-                
-                securityTipRow(
-                    icon: "eye.slash.fill",
-                    text: "Don't share your password with anyone"
-                )
-                
-                securityTipRow(
-                    icon: "key.fill",
-                    text: "Consider using a password manager"
-                )
-                
-                securityTipRow(
-                    icon: "checkmark.shield.fill",
-                    text: "Remember your new password for future logins"
-                )
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 24)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white.opacity(0.1))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                )
-        )
-        .padding(.horizontal, 20)
-        .padding(.bottom, 32)
-    }
-    
-    func securityTipRow(icon: String, text: String) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 16))
-                .foregroundColor(.green)
-                .frame(width: 20)
-            
-            Text(text)
-                .font(.callout)
-                .foregroundColor(.white.opacity(0.9))
-                .multilineTextAlignment(.leading)
-            
-            Spacer()
-        }
-    }
-    
     func successMessageView(message: String) -> some View {
         VStack {
             HStack {
@@ -376,7 +314,7 @@ private extension NewPasswordView {
                 let resetRequest = ResetPasswordRequest(
                     email: email.lowercased().trimmingCharacters(in: .whitespacesAndNewlines),
                     code: code,
-                    password: newPassword
+                    newPassword: newPassword
                 )
                 
                 // Call the backend API
