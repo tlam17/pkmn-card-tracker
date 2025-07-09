@@ -37,7 +37,7 @@ public class PasswordResetController {
             description = "Reset code sent successfully (or email doesn't exist - for security)",
             content = @Content(
                 mediaType = "application/json",
-                schema = @Schema(implementation = String.class)
+                schema = @Schema(implementation = SuccessResponse.class)
             )
         ),
         @ApiResponse(
@@ -47,7 +47,7 @@ public class PasswordResetController {
         )
     })
     @PostMapping("/forgot-password")
-    public ResponseEntity<String> forgotPassword(
+    public ResponseEntity<SuccessResponse> forgotPassword(
         @Valid 
          @io.swagger.v3.oas.annotations.parameters.RequestBody(
             description = "Email address for password reset",
@@ -68,10 +68,12 @@ public class PasswordResetController {
             passwordResetService.initiatePasswordReset(request.getEmail());
             
             // Always return success message for security (prevents email enumeration)
-            String successMessage = "If an account with that email exists, we've sent you a reset code.";
+            String message = "If an account with that email exists, we've sent you a reset code.";
+            SuccessResponse response = new SuccessResponse(message);
+            
             log.info("Password reset process completed for email: {}", request.getEmail());
             
-            return ResponseEntity.ok(successMessage);
+            return ResponseEntity.ok(response);
             
         } catch (Exception ex) {
             log.error("Error processing password reset request for email: {}", request.getEmail(), ex);
@@ -89,7 +91,7 @@ public class PasswordResetController {
             description = "Reset code is valid",
             content = @Content(
                 mediaType = "application/json",
-                schema = @Schema(implementation = String.class)
+                schema = @Schema(implementation = SuccessResponse.class)
             )
         ),
         @ApiResponse(
@@ -99,7 +101,7 @@ public class PasswordResetController {
         )
     })
     @PostMapping("/verify-reset-code")
-    public ResponseEntity<String> verifyResetCode(
+    public ResponseEntity<SuccessResponse> verifyResetCode(
         @Valid 
         @io.swagger.v3.oas.annotations.parameters.RequestBody(
             description = "Email and 6-digit reset code for verification",
@@ -121,10 +123,12 @@ public class PasswordResetController {
             
             if (isValid) {
                 log.info("Reset code verified successfully for email: {}", request.getEmail());
-                return ResponseEntity.ok("Reset code is valid.");
+                SuccessResponse response = new SuccessResponse("Reset code is valid.");
+                return ResponseEntity.ok(response);
             } else {
                 log.warn("Invalid reset code for email: {}", request.getEmail());
-                return ResponseEntity.badRequest().body("Invalid or expired reset code.");
+                SuccessResponse response = new SuccessResponse("Invalid or expired reset code.");
+                return ResponseEntity.badRequest().body(response);
             }
         } catch (Exception ex) {
             log.error("Error verifying reset code for email: {}", request.getEmail(), ex);
@@ -139,7 +143,7 @@ public class PasswordResetController {
             description = "Password reset successfully",
             content = @Content(
                 mediaType = "application/json",
-                schema = @Schema(implementation = String.class)
+                schema = @Schema(implementation = SuccessResponse.class)
             )
         ),
         @ApiResponse(
@@ -154,7 +158,7 @@ public class PasswordResetController {
         )
     })
     @PostMapping("/reset-password")
-    public ResponseEntity<String> resetPassword(
+    public ResponseEntity<SuccessResponse> resetPassword(
         @Valid
         @io.swagger.v3.oas.annotations.parameters.RequestBody(
             description = "Email, reset code, and new password for resetting the password",
@@ -176,11 +180,11 @@ public class PasswordResetController {
             passwordResetService.resetPassword(request.getEmail(), request.getCode(), request.getNewPassword());
             
             log.info("Password reset successfully for email: {}", request.getEmail());
-            return ResponseEntity.ok("Password has been reset successfully.");
+            SuccessResponse response = new SuccessResponse("Password has been reset successfully.");
+            return ResponseEntity.ok(response);
         } catch (Exception ex) {
             log.error("Error resetting password for email: {}", request.getEmail(), ex);
             throw ex; // Let the GlobalExceptionHandler handle it
         }
     }
-    
 }
