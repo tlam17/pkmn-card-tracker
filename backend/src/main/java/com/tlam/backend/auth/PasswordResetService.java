@@ -144,7 +144,7 @@ public class PasswordResetService {
         }
     }
 
-    // // Clean up expired codes
+    // TODO: Implement a scheduled task to clean up expired reset codes
     // public void cleanupExpiredCodes() {}
 
     // Invalidate all existing reset codes for the user
