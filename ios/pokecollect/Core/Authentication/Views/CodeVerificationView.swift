@@ -22,6 +22,7 @@ struct CodeVerificationView: View {
     @State private var resendCooldown = 0
     @State private var timer: Timer?
     @State private var showingSuccessAlert = false
+    @State private var isResendingCode = false
     
     // MARK: - Code Input State
     @State private var verificationCodeInput = ""
@@ -36,7 +37,7 @@ struct CodeVerificationView: View {
     }
     
     private var canResendCode: Bool {
-        resendCooldown == 0 && !isLoading
+        resendCooldown == 0 && !isLoading && !isResendingCode
     }
     
     private var timeRemaining: String {
@@ -117,10 +118,6 @@ struct CodeVerificationView: View {
         .onDisappear {
             timer?.invalidate()
         }
-        .onChange(of: currentCode) { oldValue, newValue in
-            // This onChange is now handled within the codeInputSection
-            // Removed duplicate auto-submit logic
-        }
         .alert("Code Verified Successfully", isPresented: $showingSuccessAlert) {
             Button("Continue") {
                 onCodeVerified(email, currentCode)
@@ -176,7 +173,7 @@ private extension CodeVerificationView {
                         )
                 )
             }
-            .disabled(isLoading)
+            .disabled(isLoading || isResendingCode)
             
             Spacer()
         }
@@ -236,7 +233,7 @@ private extension CodeVerificationView {
                 text: $verificationCodeInput,
                 keyboardType: .numberPad,
                 autocapitalization: .none,
-                isDisabled: isLoading
+                isDisabled: isLoading || isResendingCode
             )
             
             // Code expiration timer
@@ -259,7 +256,7 @@ private extension CodeVerificationView {
             }
             
             // Auto-submit when code is complete
-            if verificationCodeInput.count == 6 {
+            if verificationCodeInput.count == 6 && !isLoading {
                 handleVerifyCode()
             }
         }
@@ -272,7 +269,7 @@ private extension CodeVerificationView {
                 title: "Verify Code",
                 loadingTitle: "Verifying...",
                 isLoading: isLoading,
-                isEnabled: isCodeComplete
+                isEnabled: isCodeComplete && !isResendingCode
             ) {
                 handleVerifyCode()
             }
@@ -303,22 +300,36 @@ private extension CodeVerificationView {
             
             // Resend Code Button
             if canResendCode {
-                Button("Resend Code") {
+                Button(action: {
                     handleResendCode()
+                }) {
+                    HStack {
+                        if isResendingCode {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(0.8)
+                            Text("Sending...")
+                                .font(.footnote)
+                                .fontWeight(.semibold)
+                        } else {
+                            Text("Resend Code")
+                                .font(.footnote)
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(Color.white.opacity(0.15))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                            )
+                    )
                 }
-                .font(.footnote)
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(Color.white.opacity(0.15))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20)
-                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                        )
-                )
+                .disabled(isResendingCode || isLoading)
             } else {
                 Text("Resend code in \(timeRemaining)")
                     .font(.footnote)
@@ -432,21 +443,38 @@ private extension CodeVerificationView {
         // Start loading
         isLoading = true
         
-        // Simulate API call (replace with actual API call later)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            isLoading = false
-            
-            // Simulate success or error
-            let success = currentCode == "123456" || Int.random(in: 1...10) <= 7 // 70% success rate for demo
-            
-            if success {
-                successMessage = "Verification code confirmed successfully!"
-                showingSuccessAlert = true
-                print("Code verified successfully: \(currentCode)")
-            } else {
-                errorMessage = "Invalid verification code. Please try again."
-                clearCode()
-                print("Code verification failed: \(currentCode)")
+        // Make actual API call to backend
+        Task {
+            do {
+                // Create verify code request
+                let verifyRequest = VerifyResetCodeRequest(
+                    email: email.lowercased().trimmingCharacters(in: .whitespacesAndNewlines),
+                    code: currentCode
+                )
+                
+                // Call the backend API
+                let response: SuccessResponse = try await NetworkService.shared.post(
+                    endpoint: "/api/auth/verify-reset-code",
+                    body: verifyRequest,
+                    responseType: SuccessResponse.self
+                )
+                
+                // Handle successful response
+                await MainActor.run {
+                    isLoading = false
+                    successMessage = response.message
+                    showingSuccessAlert = true
+                    print("Code verification successful: \(response.message)")
+                }
+                
+            } catch {
+                // Handle API errors
+                await MainActor.run {
+                    isLoading = false
+                    handleVerificationError(error)
+                    clearCode()
+                    print("Code verification failed: \(error.localizedDescription)")
+                }
             }
         }
     }
@@ -456,17 +484,81 @@ private extension CodeVerificationView {
         errorMessage = nil
         successMessage = nil
         
-        // Simulate resend API call
-        print("Resending verification code to: \(email)")
+        // Start resending loading state
+        isResendingCode = true
         
-        // Start cooldown timer
-        startResendCooldown()
-        
-        // Show success message
-        successMessage = "A new verification code has been sent to your email."
-        
-        // Clear current code
-        clearCode()
+        // Make actual API call to resend code
+        Task {
+            do {
+                // Create forgot password request (same as initial request)
+                let forgotPasswordRequest = ForgotPasswordRequest(
+                    email: email.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+                )
+                
+                // Call the backend API to resend code
+                let response: SuccessResponse = try await NetworkService.shared.post(
+                    endpoint: "/api/auth/forgot-password",
+                    body: forgotPasswordRequest,
+                    responseType: SuccessResponse.self
+                )
+                
+                // Handle successful response
+                await MainActor.run {
+                    isResendingCode = false
+                    successMessage = response.message
+                    
+                    // Start cooldown timer
+                    startResendCooldown()
+                    
+                    // Clear current code
+                    clearCode()
+                    
+                    print("Code resent successfully: \(response.message)")
+                }
+                
+            } catch {
+                // Handle API errors
+                await MainActor.run {
+                    isResendingCode = false
+                    handleResendError(error)
+                    print("Code resend failed: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    func handleVerificationError(_ error: Error) {
+        switch error {
+        case APIError.serverError(let code, let message):
+            if code == 400 {
+                errorMessage = "Invalid or expired verification code. Please try again."
+            } else {
+                errorMessage = message ?? "Server error occurred. Please try again."
+            }
+        case APIError.networkError:
+            errorMessage = "Network connection failed. Please check your internet connection."
+        case APIError.timeout:
+            errorMessage = "Request timed out. Please try again."
+        default:
+            errorMessage = "Verification failed. Please check your code and try again."
+        }
+    }
+    
+    func handleResendError(_ error: Error) {
+        switch error {
+        case APIError.serverError(let code, let message):
+            if code == 400 {
+                errorMessage = "Unable to resend code. Please try again later."
+            } else {
+                errorMessage = message ?? "Failed to resend code. Please try again."
+            }
+        case APIError.networkError:
+            errorMessage = "Network connection failed. Unable to resend code."
+        case APIError.timeout:
+            errorMessage = "Request timed out. Please try resending the code again."
+        default:
+            errorMessage = "Failed to resend code. Please try again."
+        }
     }
     
     func clearCode() {
