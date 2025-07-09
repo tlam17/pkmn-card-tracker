@@ -49,7 +49,7 @@ struct ForgotPasswordView: View {
                 
                 ScrollView {
                     VStack(spacing: 0) {
-                        Spacer(minLength: 60)
+                        Spacer(minLength: 20)
                         
                         // Header with back button
                         headerSection
@@ -80,9 +80,6 @@ struct ForgotPasswordView: View {
                         
                         // Instructions
                         instructionsSection
-                        
-                        // Back to Login Link
-                        backToLoginSection
                         
                         Spacer(minLength: 32)
                     }
@@ -270,43 +267,6 @@ private extension ForgotPasswordView {
                 .multilineTextAlignment(.leading)
             
             Spacer()
-        }
-    }
-    
-    var backToLoginSection: some View {
-        VStack(spacing: 16) {
-            // Divider
-            HStack {
-                Rectangle()
-                    .fill(Color.white.opacity(0.3))
-                    .frame(height: 1)
-                
-                Text("or")
-                    .font(.footnote)
-                    .foregroundColor(.white.opacity(0.7))
-                    .padding(.horizontal, 16)
-                
-                Rectangle()
-                    .fill(Color.white.opacity(0.3))
-                    .frame(height: 1)
-            }
-            .padding(.horizontal, 32)
-            .padding(.vertical, 8)
-            
-            // Back to Login Link
-            HStack {
-                Text("Remember your password?")
-                    .foregroundColor(.white.opacity(0.7))
-                
-                Button("Sign In") {
-                    onBackToLogin()
-                }
-                .foregroundColor(.white)
-                .fontWeight(.semibold)
-                .disabled(isLoading)
-            }
-            .font(.footnote)
-            .padding(.bottom, 32)
         }
     }
     
