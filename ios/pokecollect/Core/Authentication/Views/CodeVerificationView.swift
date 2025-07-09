@@ -24,23 +24,11 @@ struct CodeVerificationView: View {
     @State private var showingSuccessAlert = false
     
     // MARK: - Code Input State
-    @State private var digit1 = ""
-    @State private var digit2 = ""
-    @State private var digit3 = ""
-    @State private var digit4 = ""
-    @State private var digit5 = ""
-    @State private var digit6 = ""
-    
-    // MARK: - Focus States
-    @FocusState private var focusedField: CodeField?
-    
-    enum CodeField {
-        case digit1, digit2, digit3, digit4, digit5, digit6
-    }
+    @State private var verificationCodeInput = ""
     
     // MARK: - Computed Properties
     private var currentCode: String {
-        "\(digit1)\(digit2)\(digit3)\(digit4)\(digit5)\(digit6)"
+        verificationCodeInput
     }
     
     private var isCodeComplete: Bool {
@@ -75,44 +63,48 @@ struct CodeVerificationView: View {
                 // Floating orbs for visual appeal
                 backgroundOrbs
                 
-                ScrollView {
-                    VStack(spacing: 0) {
-                        Spacer(minLength: 60)
-                        
-                        // Header with back button
-                        headerSection
-                        
-                        // Title Section
-                        titleSection
-                        
-                        // Error Message Display
-                        if let errorMessage = errorMessage {
-                            ErrorMessageView(
-                                message: errorMessage,
-                                onDismiss: {
-                                    self.errorMessage = nil
-                                }
-                            )
+                VStack(spacing: 0) {
+                    // Header with back button - separate from scroll content
+                    headerSection
+                    
+                    // Scrollable content - properly centered
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            Spacer(minLength: 20)
+                            
+                            // Title Section
+                            titleSection
+                            
+                            // Error Message Display
+                            if let errorMessage = errorMessage {
+                                ErrorMessageView(
+                                    message: errorMessage,
+                                    onDismiss: {
+                                        self.errorMessage = nil
+                                    }
+                                )
+                            }
+                            
+                            // Success Message Display
+                            if let successMessage = successMessage {
+                                successMessageView(message: successMessage)
+                            }
+                            
+                            // Code Input Section
+                            codeInputSection
+                            
+                            // Verify Button
+                            verifyButton
+                            
+                            // Resend Code Section
+                            resendCodeSection
+                            
+                            // Instructions
+                            instructionsSection
+                            
+                            Spacer(minLength: 32)
                         }
-                        
-                        // Success Message Display
-                        if let successMessage = successMessage {
-                            successMessageView(message: successMessage)
-                        }
-                        
-                        // Code Input Section
-                        codeInputSection
-                        
-                        // Verify Button
-                        verifyButton
-                        
-                        // Resend Code Section
-                        resendCodeSection
-                        
-                        // Instructions
-                        instructionsSection
-                        
-                        Spacer(minLength: 32)
+                        .frame(maxWidth: .infinity) // Ensure full width usage
                     }
                 }
             }
@@ -121,16 +113,13 @@ struct CodeVerificationView: View {
         .animation(.easeInOut(duration: 0.3), value: successMessage)
         .onAppear {
             startResendCooldown()
-            focusedField = .digit1
         }
         .onDisappear {
             timer?.invalidate()
         }
-        .onChange(of: currentCode) { newValue in
-            if newValue.count == 6 {
-                // Auto-submit when code is complete
-                handleVerifyCode()
-            }
+        .onChange(of: currentCode) { oldValue, newValue in
+            // This onChange is now handled within the codeInputSection
+            // Removed duplicate auto-submit logic
         }
         .alert("Code Verified Successfully", isPresented: $showingSuccessAlert) {
             Button("Continue") {
@@ -191,8 +180,9 @@ private extension CodeVerificationView {
             
             Spacer()
         }
-        .padding(.horizontal, 32)
-        .padding(.bottom, 20)
+        .padding(.horizontal, 20)
+        .padding(.top, 20)
+        .padding(.bottom, 10)
     }
     
     var titleSection: some View {
@@ -232,6 +222,7 @@ private extension CodeVerificationView {
                     .padding(.horizontal, 20)
             }
         }
+        .frame(maxWidth: .infinity) // Ensure proper centering
         .padding(.bottom, 32)
     }
     
@@ -242,15 +233,16 @@ private extension CodeVerificationView {
                 .fontWeight(.semibold)
                 .foregroundColor(.white)
             
-            HStack(spacing: 12) {
-                codeDigitField($digit1, field: .digit1, nextField: .digit2)
-                codeDigitField($digit2, field: .digit2, nextField: .digit3, previousField: .digit1)
-                codeDigitField($digit3, field: .digit3, nextField: .digit4, previousField: .digit2)
-                codeDigitField($digit4, field: .digit4, nextField: .digit5, previousField: .digit3)
-                codeDigitField($digit5, field: .digit5, nextField: .digit6, previousField: .digit4)
-                codeDigitField($digit6, field: .digit6, previousField: .digit5)
-            }
-            .padding(.horizontal, 32)
+            // Single input field for the 6-digit code
+            AuthTextFieldView(
+                title: "",
+                placeholder: "Enter 6-digit code",
+                iconName: "key",
+                text: $verificationCodeInput,
+                keyboardType: .numberPad,
+                autocapitalization: .none,
+                isDisabled: isLoading
+            )
             
             // Code expiration timer
             if resendCooldown > 0 {
@@ -259,39 +251,25 @@ private extension CodeVerificationView {
                     .foregroundColor(.white.opacity(0.7))
             }
         }
+        .frame(maxWidth: .infinity) // Ensure proper centering
+        .padding(.horizontal, 20)
         .padding(.bottom, 32)
-    }
-    
-    func codeDigitField(
-        _ text: Binding<String>,
-        field: CodeField,
-        nextField: CodeField? = nil,
-        previousField: CodeField? = nil
-    ) -> some View {
-        TextField("", text: text)
-            .font(.title)
-            .fontWeight(.bold)
-            .multilineTextAlignment(.center)
-            .foregroundColor(.white)
-            .frame(width: 50, height: 60)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.white.opacity(0.15))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(
-                                focusedField == field ? Color.yellow : Color.white.opacity(0.3),
-                                lineWidth: focusedField == field ? 2 : 1
-                            )
-                    )
-            )
-            .keyboardType(.numberPad)
-            .focused($focusedField, equals: field)
-            .disabled(isLoading)
-            .onChange(of: text.wrappedValue) { newValue in
-                handleDigitInput(newValue, text: text, nextField: nextField, previousField: previousField)
+        .onChange(of: verificationCodeInput) { oldValue, newValue in
+            // Limit to 6 digits only
+            let filtered = newValue.filter { $0.isNumber }
+            if filtered.count <= 6 {
+                verificationCodeInput = filtered
+            } else {
+                verificationCodeInput = String(filtered.prefix(6))
             }
+            
+            // Auto-submit when code is complete
+            if verificationCodeInput.count == 6 {
+                handleVerifyCode()
+            }
+        }
     }
+
     
     var verifyButton: some View {
         VStack(spacing: 16) {
@@ -303,8 +281,8 @@ private extension CodeVerificationView {
             ) {
                 handleVerifyCode()
             }
-            .padding(.horizontal, 32)
         }
+        .padding(.horizontal, 20)
         .padding(.bottom, 32)
     }
     
@@ -325,7 +303,7 @@ private extension CodeVerificationView {
                     .fill(Color.white.opacity(0.3))
                     .frame(height: 1)
             }
-            .padding(.horizontal, 32)
+            .padding(.horizontal, 20)
             .padding(.vertical, 8)
             
             // Resend Code Button
@@ -352,6 +330,7 @@ private extension CodeVerificationView {
                     .foregroundColor(.white.opacity(0.6))
             }
         }
+        .frame(maxWidth: .infinity) // Ensure proper centering
         .padding(.bottom, 32)
     }
     
@@ -379,7 +358,7 @@ private extension CodeVerificationView {
                 )
             }
         }
-        .padding(.horizontal, 32)
+        .padding(.horizontal, 20)
         .padding(.vertical, 24)
         .background(
             RoundedRectangle(cornerRadius: 16)
@@ -389,7 +368,7 @@ private extension CodeVerificationView {
                         .stroke(Color.white.opacity(0.2), lineWidth: 1)
                 )
         )
-        .padding(.horizontal, 32)
+        .padding(.horizontal, 20)
         .padding(.bottom, 32)
     }
     
@@ -434,7 +413,7 @@ private extension CodeVerificationView {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color.white.opacity(0.9))
             )
-            .padding(.horizontal, 32)
+            .padding(.horizontal, 20)
             .padding(.bottom, 16)
         }
         .transition(.opacity.combined(with: .move(edge: .top)))
@@ -443,59 +422,6 @@ private extension CodeVerificationView {
 
 // MARK: - Private Methods
 private extension CodeVerificationView {
-    
-    func handleDigitInput(
-        _ newValue: String,
-        text: Binding<String>,
-        nextField: CodeField?,
-        previousField: CodeField?
-    ) {
-        // Only allow numbers
-        let filtered = newValue.filter { $0.isNumber }
-        
-        if filtered.count > 1 {
-            // Handle paste operations - distribute digits
-            handlePastedCode(filtered)
-        } else {
-            text.wrappedValue = filtered
-            
-            // Move to next field if digit entered
-            if !filtered.isEmpty, let nextField = nextField {
-                focusedField = nextField
-            }
-            
-            // Move to previous field if digit deleted
-            if filtered.isEmpty, let previousField = previousField {
-                focusedField = previousField
-            }
-        }
-    }
-    
-    func handlePastedCode(_ code: String) {
-        let digits = Array(code.prefix(6))
-        
-        digit1 = digits.count > 0 ? String(digits[0]) : ""
-        digit2 = digits.count > 1 ? String(digits[1]) : ""
-        digit3 = digits.count > 2 ? String(digits[2]) : ""
-        digit4 = digits.count > 3 ? String(digits[3]) : ""
-        digit5 = digits.count > 4 ? String(digits[4]) : ""
-        digit6 = digits.count > 5 ? String(digits[5]) : ""
-        
-        // Focus on the next empty field or the last field
-        if digits.count < 6 {
-            switch digits.count {
-            case 0: focusedField = .digit1
-            case 1: focusedField = .digit2
-            case 2: focusedField = .digit3
-            case 3: focusedField = .digit4
-            case 4: focusedField = .digit5
-            case 5: focusedField = .digit6
-            default: focusedField = .digit6
-            }
-        } else {
-            focusedField = nil
-        }
-    }
     
     func handleVerifyCode() {
         // Clear any previous messages
@@ -525,7 +451,6 @@ private extension CodeVerificationView {
             } else {
                 errorMessage = "Invalid verification code. Please try again."
                 clearCode()
-                focusedField = .digit1
                 print("Code verification failed: \(currentCode)")
             }
         }
@@ -547,16 +472,10 @@ private extension CodeVerificationView {
         
         // Clear current code
         clearCode()
-        focusedField = .digit1
     }
     
     func clearCode() {
-        digit1 = ""
-        digit2 = ""
-        digit3 = ""
-        digit4 = ""
-        digit5 = ""
-        digit6 = ""
+        verificationCodeInput = ""
     }
     
     func startResendCooldown() {
