@@ -22,6 +22,7 @@ struct Config {
             static let register = "\(auth)/register"
             static let forgotPassword = "\(auth)/forgot-password"
             static let verifyResetCode = "\(auth)/verify-reset-code"
+            static let resetPassword = "\(auth)/reset-password"
             static let test = "/api/test"
         }
     }
@@ -64,6 +65,11 @@ extension Config.API.Endpoints {
     /// Get full URL for verify reset code endpoint
     static var verifyResetCodeURL: String {
         return Config.API.baseURL + verifyResetCode
+    }
+    
+    /// Get full URL for reset password endpoint
+    static var resetPasswordURL: String {
+        return Config.API.baseURL + resetPassword
     }
     
     /// Get full URL for test endpoint
