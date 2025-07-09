@@ -9,8 +9,9 @@ import SwiftUI
 
 struct LoginView: View {
     
-    // MARK: - Navigation Callback
+    // MARK: - Navigation Callbacks
     let onSignUpTapped: () -> Void
+    let onForgotPasswordTapped: () -> Void
     
     // MARK: - State Properties
     @State private var email = ""
@@ -173,8 +174,7 @@ private extension LoginView {
             HStack {
                 Spacer()
                 Button("Forgot Password?") {
-                    // Handle forgot password
-                    print("Forgot password tapped")
+                    onForgotPasswordTapped()
                 }
                 .font(.footnote)
                 .foregroundColor(.white.opacity(0.8))
@@ -276,6 +276,7 @@ private extension LoginView {
 extension LoginView {
     init() {
         self.onSignUpTapped = {}
+        self.onForgotPasswordTapped = {}
     }
 }
 
