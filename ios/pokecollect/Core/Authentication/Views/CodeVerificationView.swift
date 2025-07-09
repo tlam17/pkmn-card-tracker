@@ -228,11 +228,6 @@ private extension CodeVerificationView {
     
     var codeInputSection: some View {
         VStack(spacing: 16) {
-            Text("Enter Verification Code")
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
-            
             // Single input field for the 6-digit code
             AuthTextFieldView(
                 title: "",
