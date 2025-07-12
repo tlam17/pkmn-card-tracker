@@ -1,4 +1,4 @@
-package com.tlam.backend.cardset;
+package com.tlam.backend.pokemontcgapi;
 
 import lombok.Data;
 
