@@ -58,10 +58,8 @@ struct ContentView: View {
     
     private func configureTabBarAppearance() {
         let tabBarAppearance = UITabBarAppearance()
-        tabBarAppearance.configureWithTransparentBackground()
         
-        // Set the background with blur effect to match gradient theme
-        tabBarAppearance.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.1)
+        tabBarAppearance.backgroundColor = UIColor(Color.mint.opacity(0.7))
         
         // Normal item appearance
         tabBarAppearance.stackedLayoutAppearance.normal.iconColor = UIColor.white.withAlphaComponent(0.6)
