@@ -15,7 +15,6 @@ import com.tlam.backend.cardset.CardSet;
 import com.tlam.backend.cardset.Language;
 import com.tlam.backend.cardset.CardSetRepository;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
