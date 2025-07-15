@@ -135,7 +135,7 @@ private extension BrowseView {
         VStack(spacing: 8) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Browse Cards")
+                    Text("Browse Sets")
                         .font(.largeTitle)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
@@ -272,10 +272,6 @@ struct SeriesDropdownView: View {
                             .fontWeight(.semibold)
                             .foregroundColor(.white)
                             .multilineTextAlignment(.leading)
-                        
-                        Text("\(series.sets.count) sets")
-                            .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.7))
                     }
                     
                     Spacer()
@@ -363,20 +359,6 @@ struct SetRowView: View {
                         .foregroundColor(.white)
                         .multilineTextAlignment(.leading)
                         .lineLimit(2)
-                    
-                    HStack(spacing: 12) {
-                        Text("\(set.totalCards) cards")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.7))
-                        
-                        Text("•")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.5))
-                        
-                        Text(formatDate(set.releaseDate))
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.7))
-                    }
                 }
                 
                 Spacer()
