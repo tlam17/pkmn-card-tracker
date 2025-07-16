@@ -20,8 +20,8 @@ struct BrowseView: View {
     // MARK: - Services
     private let cardSetsService: CardSetsServiceProtocol
     
-    // MARK: - Available Series (for now, just Scarlet & Violet)
-    private let availableSeries = ["Scarlet & Violet", "Sword & Shield", "Sun & Moon"]
+    // MARK: - Available Series
+    private let availableSeries = ["Scarlet & Violet", "Sword & Shield", "Sun & Moon", "X & Y", "Black & White", "HeartGold & SoulSilver", "Platinum", "Diamond & Pearl", "EX", "E-Card", "Neo", "Gym", "Base"]
     
     // MARK: - Computed Properties
     private var organizedSeries: [Series] {
@@ -49,7 +49,11 @@ struct BrowseView: View {
                 return first.releaseDate > second.releaseDate
             }
             return Series(name: seriesName, sets: sortedSets)
-        }.sorted { $0.name < $1.name } // Sort series alphabetically
+        }.sorted { firstSeries, secondSeries in
+            // Sort by the order in availableSeries array
+            let firstIndex = availableSeries.firstIndex(of: firstSeries.name) ?? Int.max
+            let secondIndex = availableSeries.firstIndex(of: secondSeries.name) ?? Int.max
+            return firstIndex < secondIndex }
     }
     
     // MARK: - Initialization
