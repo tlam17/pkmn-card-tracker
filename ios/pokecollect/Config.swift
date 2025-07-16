@@ -15,8 +15,8 @@ struct Config {
         static let baseURL = "http://localhost:8080"
         static let timeout: TimeInterval = 30.0
         
-        // Authentication Endpoints
         struct Endpoints {
+            // Authentication Endpoints
             static let auth = "/api/auth"
             static let login = "\(auth)/login"
             static let register = "\(auth)/register"
@@ -24,6 +24,12 @@ struct Config {
             static let verifyResetCode = "\(auth)/verify-reset-code"
             static let resetPassword = "\(auth)/reset-password"
             static let test = "/api/test"
+            
+            // CardSets Endpoints
+            static let sets = "/api/sets"
+            static func setsBySeries(_ series: String) -> String {
+                return "\(sets)/series/\(series)"
+            }
         }
     }
     

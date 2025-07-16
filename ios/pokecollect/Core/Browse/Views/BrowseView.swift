@@ -7,86 +7,54 @@
 
 import SwiftUI
 
-// MARK: - Mock Data Models
-struct MockCardSet {
-    let id: String
-    let name: String
-    let series: String
-    let totalCards: Int
-    let releaseDate: String
-    let symbolUrl: String?
-    let logoUrl: String?
-}
-
-struct MockSeries {
-    let name: String
-    let sets: [MockCardSet]
-}
-
 struct BrowseView: View {
     
     // MARK: - State Properties
     @State private var expandedSeries: Set<String> = []
     @State private var isLoading = false
     @State private var searchText = ""
+    @State private var cardSets: [CardSet] = []
+    @State private var errorMessage: String? = nil
+    @State private var hasLoadedData = false
     
-    // MARK: - Mock Data
-    private let mockSeriesData: [MockSeries] = [
-        MockSeries(name: "Scarlet & Violet", sets: [
-            MockCardSet(id: "sv6", name: "Twilight Masquerade", series: "Scarlet & Violet", totalCards: 226, releaseDate: "2024-05-24", symbolUrl: nil, logoUrl: nil),
-            MockCardSet(id: "sv5", name: "Temporal Forces", series: "Scarlet & Violet", totalCards: 218, releaseDate: "2024-03-22", symbolUrl: nil, logoUrl: nil),
-            MockCardSet(id: "sv4", name: "Paradox Rift", series: "Scarlet & Violet", totalCards: 266, releaseDate: "2023-11-03", symbolUrl: nil, logoUrl: nil),
-            MockCardSet(id: "sv3", name: "Obsidian Flames", series: "Scarlet & Violet", totalCards: 230, releaseDate: "2023-08-11", symbolUrl: nil, logoUrl: nil),
-            MockCardSet(id: "sv2", name: "Paldea Evolved", series: "Scarlet & Violet", totalCards: 279, releaseDate: "2023-06-09", symbolUrl: nil, logoUrl: nil),
-            MockCardSet(id: "sv1", name: "Scarlet & Violet Base Set", series: "Scarlet & Violet", totalCards: 198, releaseDate: "2023-03-31", symbolUrl: nil, logoUrl: nil)
-        ]),
-        MockSeries(name: "Sword & Shield", sets: [
-            MockCardSet(id: "swsh12", name: "Silver Tempest", series: "Sword & Shield", totalCards: 245, releaseDate: "2022-11-11", symbolUrl: nil, logoUrl: nil),
-            MockCardSet(id: "swsh11", name: "Lost Origin", series: "Sword & Shield", totalCards: 196, releaseDate: "2022-09-09", symbolUrl: nil, logoUrl: nil),
-            MockCardSet(id: "swsh10", name: "Astral Radiance", series: "Sword & Shield", totalCards: 189, releaseDate: "2022-05-27", symbolUrl: nil, logoUrl: nil),
-            MockCardSet(id: "swsh9", name: "Brilliant Stars", series: "Sword & Shield", totalCards: 172, releaseDate: "2022-02-25", symbolUrl: nil, logoUrl: nil),
-            MockCardSet(id: "swsh8", name: "Fusion Strike", series: "Sword & Shield", totalCards: 264, releaseDate: "2021-11-12", symbolUrl: nil, logoUrl: nil),
-            MockCardSet(id: "swsh7", name: "Evolving Skies", series: "Sword & Shield", totalCards: 237, releaseDate: "2021-08-27", symbolUrl: nil, logoUrl: nil)
-        ]),
-        MockSeries(name: "Sun & Moon", sets: [
-            MockCardSet(id: "sm12", name: "Cosmic Eclipse", series: "Sun & Moon", totalCards: 236, releaseDate: "2019-11-01", symbolUrl: nil, logoUrl: nil),
-            MockCardSet(id: "sm11", name: "Unified Minds", series: "Sun & Moon", totalCards: 236, releaseDate: "2019-08-02", symbolUrl: nil, logoUrl: nil),
-            MockCardSet(id: "sm10", name: "Unbroken Bonds", series: "Sun & Moon", totalCards: 214, releaseDate: "2019-05-03", symbolUrl: nil, logoUrl: nil),
-            MockCardSet(id: "sm9", name: "Team Up", series: "Sun & Moon", totalCards: 181, releaseDate: "2019-02-01", symbolUrl: nil, logoUrl: nil),
-            MockCardSet(id: "sm8", name: "Lost Thunder", series: "Sun & Moon", totalCards: 214, releaseDate: "2018-11-02", symbolUrl: nil, logoUrl: nil),
-            MockCardSet(id: "sm1", name: "Sun & Moon Base Set", series: "Sun & Moon", totalCards: 149, releaseDate: "2017-02-03", symbolUrl: nil, logoUrl: nil)
-        ]),
-        MockSeries(name: "XY", sets: [
-            MockCardSet(id: "xy12", name: "Evolutions", series: "XY", totalCards: 108, releaseDate: "2016-11-02", symbolUrl: nil, logoUrl: nil),
-            MockCardSet(id: "xy11", name: "Steam Siege", series: "XY", totalCards: 114, releaseDate: "2016-08-03", symbolUrl: nil, logoUrl: nil),
-            MockCardSet(id: "xy10", name: "Fates Collide", series: "XY", totalCards: 124, releaseDate: "2016-05-02", symbolUrl: nil, logoUrl: nil),
-            MockCardSet(id: "xy1", name: "XY Base Set", series: "XY", totalCards: 146, releaseDate: "2014-02-05", symbolUrl: nil, logoUrl: nil)
-        ]),
-        MockSeries(name: "Classic", sets: [
-            MockCardSet(id: "base1", name: "Base Set", series: "Classic", totalCards: 102, releaseDate: "1999-01-09", symbolUrl: nil, logoUrl: nil),
-            MockCardSet(id: "jungle", name: "Jungle", series: "Classic", totalCards: 64, releaseDate: "1999-06-16", symbolUrl: nil, logoUrl: nil),
-            MockCardSet(id: "fossil", name: "Fossil", series: "Classic", totalCards: 62, releaseDate: "1999-10-10", symbolUrl: nil, logoUrl: nil),
-            MockCardSet(id: "base2", name: "Base Set 2", series: "Classic", totalCards: 130, releaseDate: "2000-02-24", symbolUrl: nil, logoUrl: nil)
-        ])
-    ]
+    // MARK: - Services
+    private let cardSetsService: CardSetsServiceProtocol
+    
+    // MARK: - Available Series (for now, just Scarlet & Violet)
+    private let availableSeries = ["Scarlet & Violet", "Sword & Shield", "Sun & Moon"]
     
     // MARK: - Computed Properties
-    private var filteredSeries: [MockSeries] {
-        if searchText.isEmpty {
-            return mockSeriesData
-        } else {
-            return mockSeriesData.compactMap { series in
-                let filteredSets = series.sets.filter { set in
-                    set.name.localizedCaseInsensitiveContains(searchText) ||
-                    set.series.localizedCaseInsensitiveContains(searchText)
-                }
-                
-                if !filteredSets.isEmpty || series.name.localizedCaseInsensitiveContains(searchText) {
-                    return MockSeries(name: series.name, sets: filteredSets.isEmpty ? series.sets : filteredSets)
-                }
-                return nil
-            }
+    private var organizedSeries: [Series] {
+        var seriesDict: [String: [CardSet]] = [:]
+        
+        // Filter sets based on search text
+        let filteredSets = cardSets.filter { set in
+            searchText.isEmpty ||
+            set.name.localizedCaseInsensitiveContains(searchText) ||
+            set.series.localizedCaseInsensitiveContains(searchText)
         }
+        
+        // Group sets by series
+        for set in filteredSets {
+            if seriesDict[set.series] == nil {
+                seriesDict[set.series] = []
+            }
+            seriesDict[set.series]?.append(set)
+        }
+        
+        // Convert to Series objects and sort sets by release date (newest first)
+        return seriesDict.map { (seriesName, sets) in
+            let sortedSets = sets.sorted { first, second in
+                // Sort by release date descending (newest first)
+                return first.releaseDate > second.releaseDate
+            }
+            return Series(name: seriesName, sets: sortedSets)
+        }.sorted { $0.name < $1.name } // Sort series alphabetically
+    }
+    
+    // MARK: - Initialization
+    init(cardSetsService: CardSetsServiceProtocol = CardSetsService()) {
+        self.cardSetsService = cardSetsService
     }
     
     var body: some View {
@@ -114,6 +82,10 @@ struct BrowseView: View {
                     // Content
                     if isLoading {
                         loadingView
+                    } else if let errorMessage = errorMessage {
+                        errorView(message: errorMessage)
+                    } else if organizedSeries.isEmpty && hasLoadedData {
+                        emptyStateView
                     } else {
                         seriesListView
                     }
@@ -122,8 +94,12 @@ struct BrowseView: View {
         }
         .navigationBarHidden(true)
         .onAppear {
-            // Simulate loading
-            simulateDataLoad()
+            if !hasLoadedData {
+                loadCardSets()
+            }
+        }
+        .refreshable {
+            await refreshData()
         }
     }
 }
@@ -139,6 +115,12 @@ private extension BrowseView {
                         .font(.largeTitle)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
+                    
+                    if !cardSets.isEmpty {
+                        Text("\(cardSets.count) sets available")
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.8))
+                    }
                 }
                 
                 Spacer()
@@ -203,10 +185,65 @@ private extension BrowseView {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
+    func errorView(message: String) -> some View {
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 50))
+                .foregroundColor(.white.opacity(0.6))
+            
+            Text("Error Loading Sets")
+                .font(.title2)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+            
+            Text(message)
+                .font(.subheadline)
+                .foregroundColor(.white.opacity(0.8))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+            
+            Button(action: {
+                loadCardSets()
+            }) {
+                Text("Try Again")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.white.opacity(0.2))
+                    )
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
+    var emptyStateView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "rectangle.stack")
+                .font(.system(size: 50))
+                .foregroundColor(.white.opacity(0.6))
+            
+            Text("No Sets Found")
+                .font(.title2)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+            
+            Text("Try adjusting your search terms or check back later.")
+                .font(.subheadline)
+                .foregroundColor(.white.opacity(0.8))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
     var seriesListView: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
-                ForEach(filteredSeries, id: \.name) { series in
+                ForEach(organizedSeries, id: \.name) { series in
                     SeriesDropdownView(
                         series: series,
                         isExpanded: expandedSeries.contains(series.name),
@@ -223,6 +260,10 @@ private extension BrowseView {
             .padding(.horizontal, 20)
         }
     }
+}
+
+// MARK: - Private Methods
+private extension BrowseView {
     
     func toggleSeries(_ seriesName: String) {
         withAnimation(.easeInOut(duration: 0.3)) {
@@ -234,19 +275,62 @@ private extension BrowseView {
         }
     }
     
-    func simulateDataLoad() {
+    func loadCardSets() {
         isLoading = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                isLoading = false
+        errorMessage = nil
+        
+        Task {
+            do {
+                var allSets: [CardSet] = []
+                
+                // Load sets for each available series
+                for series in availableSeries {
+                    let sets = try await cardSetsService.getSetsBySeries(series)
+                    allSets.append(contentsOf: sets)
+                }
+                
+                await MainActor.run {
+                    self.cardSets = allSets
+                    self.hasLoadedData = true
+                    self.isLoading = false
+                    
+                    // Auto-expand the first series if we have data
+                    if let firstSeries = organizedSeries.first {
+                        expandedSeries.insert(firstSeries.name)
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self.hasLoadedData = true
+                    self.isLoading = false
+                    self.errorMessage = error.localizedDescription
+                }
             }
+        }
+    }
+    
+    @MainActor
+    func refreshData() async {
+        do {
+            var allSets: [CardSet] = []
+            
+            // Load sets for each available series
+            for series in availableSeries {
+                let sets = try await cardSetsService.getSetsBySeries(series)
+                allSets.append(contentsOf: sets)
+            }
+            
+            self.cardSets = allSets
+            self.errorMessage = nil
+        } catch {
+            self.errorMessage = error.localizedDescription
         }
     }
 }
 
 // MARK: - Series Dropdown Component
 struct SeriesDropdownView: View {
-    let series: MockSeries
+    let series: Series
     let isExpanded: Bool
     let onToggle: () -> Void
     
@@ -280,14 +364,13 @@ struct SeriesDropdownView: View {
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.white.opacity(0.8))
-                        .rotationEffect(.degrees(isExpanded ? 0 : 0))
                         .animation(.easeInOut(duration: 0.2), value: isExpanded)
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
             }
             .background(
-                RoundedRectangle(cornerRadius: isExpanded ? 16 : 16)
+                RoundedRectangle(cornerRadius: 16)
                     .fill(Color.white.opacity(0.1))
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
@@ -298,7 +381,7 @@ struct SeriesDropdownView: View {
             // Sets List (Expandable)
             if isExpanded {
                 VStack(spacing: 8) {
-                    ForEach(series.sets, id: \.id) { set in
+                    ForEach(series.sets) { set in
                         SetRowView(set: set)
                     }
                 }
@@ -326,7 +409,7 @@ struct SeriesDropdownView: View {
 
 // MARK: - Set Row Component
 struct SetRowView: View {
-    let set: MockCardSet
+    let set: CardSet
     
     var body: some View {
         Button(action: {
@@ -334,18 +417,31 @@ struct SetRowView: View {
             print("Tapped on set: \(set.name)")
         }) {
             HStack(spacing: 16) {
-                // Set symbol placeholder
+                // Set logo/symbol image
                 ZStack {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(Color.white.opacity(0.15))
-                        .frame(width: 40, height: 40)
+                        .frame(width: 48, height: 48)
                     
-                    if let symbolUrl = set.symbolUrl {
-                        // TODO: Load actual image
-                        Image(systemName: "photo")
-                            .font(.system(size: 16))
-                            .foregroundColor(.white.opacity(0.6))
+                    // Use logo if available, fallback to symbol, then to placeholder
+                    if let logoUrl = set.logoUrl, !logoUrl.isEmpty {
+                        CachedAsyncImage(
+                            url: logoUrl,
+                            placeholderSystemImage: "photo",
+                            placeholderColor: .white.opacity(0.6)
+                        )
+                        .frame(width: 40, height: 40)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                    } else if let symbolUrl = set.symbolUrl, !symbolUrl.isEmpty {
+                        CachedAsyncImage(
+                            url: symbolUrl,
+                            placeholderSystemImage: "photo",
+                            placeholderColor: .white.opacity(0.6)
+                        )
+                        .frame(width: 40, height: 40)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
                     } else {
+                        // Fallback to initials
                         Text(String(set.name.prefix(2)).uppercased())
                             .font(.caption)
                             .fontWeight(.bold)
@@ -380,23 +476,11 @@ struct SetRowView: View {
         }
         .buttonStyle(PlainButtonStyle())
     }
-    
-    private func formatDate(_ dateString: String) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        
-        if let date = formatter.date(from: dateString) {
-            formatter.dateFormat = "MMM yyyy"
-            return formatter.string(from: date)
-        }
-        
-        return dateString
-    }
 }
 
 // MARK: - Preview
 struct BrowseView_Previews: PreviewProvider {
     static var previews: some View {
-        BrowseView()
+        BrowseView(cardSetsService: MockCardSetsService())
     }
 }
