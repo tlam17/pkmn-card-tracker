@@ -15,3 +15,19 @@ public class PokemonTCGSetDTO {
     private String updatedAt;
     private PokemonTCGSetImages images;
 }
+
+// Supporting DTOs for nested objects
+
+@Data
+class PokemonTCGSetImages {
+    private String symbol;
+    private String logo;
+}
+
+@Data
+class PokemonTCGSetLegalities {
+    private String unlimited;
+    private String standard;
+    private String expanded;
+}
+
