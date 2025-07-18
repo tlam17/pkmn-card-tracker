@@ -69,4 +69,44 @@ public class DataSeedingController {
             throw new RuntimeException("Failed to seed card sets: " + e.getMessage());
         }
     }
+
+    @Operation(
+        summary = "Seed cards from Pokémon TCG API", 
+        description = "Fetches all cards from the Pokémon TCG API and saves them to the database. This operation may take several minutes to complete."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Cards seeded successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = SuccessResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "500",
+            description = "Error occurred during seeding",
+            content = @Content(mediaType = "application/json")
+        )
+    })
+    @PostMapping("/cards")
+    public ResponseEntity<SuccessResponse> seedCards() {
+        try {
+            log.info("Starting manual cards seeding via API endpoint");
+
+            // This operation may take several minutes
+            pokemonTCGService.fetchAndSaveAllCards();
+
+            SuccessResponse response = new SuccessResponse(
+                "Cards have been successfully seeded from the Pokémon TCG API"
+            );
+
+            log.info("Manual card seeding completed successfully");
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error during manual card seeding", e);
+            throw new RuntimeException("Failed to seed cards: " + e.getMessage());
+        }
+    }
 }
