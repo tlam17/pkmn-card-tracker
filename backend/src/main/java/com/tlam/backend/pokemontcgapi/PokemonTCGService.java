@@ -133,9 +133,27 @@ public class PokemonTCGService {
                 if (response != null && response.getData() != null) {
                     // Convert DTOs to Card entities
                     List<Card> pageCards = convertCardDtosToEntities(response.getData());
+                    allCards.addAll(pageCards);
+
+                    log.info("Fetched {} cards from page {} (Total in response: {})", 
+                            pageCards.size(), currentPage, response.getTotalCount());
+                    
+                    // Check if we have more pages
+                    hasMorePages = response.getPage() * response.getPageSize() < response.getTotalCount();
+                    currentPage++;
+
+                    // Add delay between requests to be respectful to the API
+                    if (hasMorePages) {
+                        Thread.sleep(configProperties.getRequestDelay());
+                    }
+                } else {
+                    log.warn("Received null or empty response for page {}", currentPage);
+                    hasMorePages = false;
                 }
             }
 
+            saveCardsToDatabase(allCards);
+            log.info("Successfully fetched and saved {} cards total", allCards.size());
         } catch (Exception e) {
             log.error("Error fetching sets from Pokémon TCG API", e);
             throw new RuntimeException("Failed to fetch sets from Pokémon TCG API", e);
@@ -307,6 +325,37 @@ public class PokemonTCGService {
         }
 
         log.info("Database save complete: {} new sets saved, {} existing sets skipped", 
+                savedCount, skippedCount);
+    }
+
+    /**
+     * Saves cards to database, handling duplicates gracefully
+     */
+    private void saveCardsToDatabase(List<Card> cards) {
+        log.info("Saving {} cards to database", cards.size());
+        
+        int savedCount = 0;
+        int skippedCount = 0;
+
+        for (Card card : cards) {
+            try {
+                // Check if card already exists
+                if (cardRepository.existsById(card.getId())) {
+                    log.debug("Card {} already exists, skipping", card.getId());
+                    skippedCount++;
+                } else {
+                    cardRepository.save(card);
+                    savedCount++;
+                    log.debug("Saved card: {} ({}) - Set: {}", 
+                             card.getName(), card.getId(), card.getSetId());
+                }
+            } catch (Exception e) {
+                log.error("Failed to save card {} ({}): {}", card.getId(), card.getName(), e.getMessage());
+                // Continue with other cards
+            }
+        }
+
+        log.info("Database save complete: {} new cards saved, {} existing cards skipped", 
                 savedCount, skippedCount);
     }
 
