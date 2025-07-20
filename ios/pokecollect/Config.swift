@@ -30,6 +30,12 @@ struct Config {
             static func setsBySeries(_ series: String) -> String {
                 return "\(sets)/series/\(series)"
             }
+            
+            // Cards Endpoints
+            static let cards = "/api/cards"
+            static func cardsBySetId(_ setId: String) -> String {
+                return "\(cards)/set/\(setId)"
+            }
         }
     }
     
@@ -81,5 +87,15 @@ extension Config.API.Endpoints {
     /// Get full URL for test endpoint
     static var testURL: String {
         return Config.API.baseURL + test
+    }
+    
+    /// Get full URL for sets by series endpoint
+    static func setsBySeriesURL(_ series: String) -> String {
+        return Config.API.baseURL + setsBySeries(series)
+    }
+    
+    /// Get full URL for cards by set ID endpoint
+    static func cardsBySetIdURL(_ setId: String) -> String {
+        return Config.API.baseURL + cardsBySetId(setId)
     }
 }
