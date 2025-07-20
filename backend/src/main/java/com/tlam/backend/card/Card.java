@@ -32,7 +32,7 @@ public class Card {
 
     @NotBlank
     @Column(nullable = false)
-    private Integer number;
+    private String number;
 
     @NotBlank
     @Column(nullable = false, name = "set_id")
