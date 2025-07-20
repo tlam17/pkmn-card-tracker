@@ -39,7 +39,7 @@ public class CardController {
             log.info("Fetching cards for set with ID: {}", setID);
 
             // Fetch cards from repository
-            List<Card> cards = cardRepository.findBySetIdOrderByNumberAsc(setID);
+            List<Card> cards = cardRepository.findBySetId(setID);
 
             if (cards.isEmpty()) {
                 log.info("No cards found for set with ID: {}", setID);
