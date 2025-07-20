@@ -279,7 +279,7 @@ public class PokemonTCGService {
                 Card card = Card.builder()
                         .id(dto.getId())
                         .name(dto.getName())
-                        .number(dto.getNumber())
+                        .number(Integer.parseInt(dto.getNumber()))
                         .setId(dto.getSet() != null ? dto.getSet().getId() : null)
                         .rarity(dto.getRarity())
                         .smallImageUrl(dto.getImages() != null ? dto.getImages().getSmall() : null)
