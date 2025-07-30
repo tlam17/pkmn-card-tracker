@@ -2,7 +2,7 @@
 //  SetDetailView.swift
 //  pokecollect
 //
-//  Created by Tyler Lam on 7/20/25.
+//  Created by Tyler Lam on 7/21/25.
 //
 
 import SwiftUI
@@ -186,16 +186,6 @@ private extension SetDetailView {
                     Text(cardSet.series)
                         .font(.subheadline)
                         .foregroundColor(.white.opacity(0.8))
-                    
-                    if !cards.isEmpty {
-                        Text("\(cards.count) of \(cardSet.totalCards) cards")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.7))
-                    } else {
-                        Text("\(cardSet.totalCards) cards total")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.7))
-                    }
                 }
                 
                 Spacer()
@@ -435,36 +425,7 @@ struct CardGridItemView: View {
                                 .foregroundColor(.white.opacity(0.6))
                         }
                     }
-                    
-                    // Card number overlay
-                    VStack {
-                        HStack {
-                            Spacer()
-                            Text("#\(card.displayNumber)")
-                                .font(.caption2)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.black.opacity(0.6))
-                                )
-                                .padding(.top, 8)
-                                .padding(.trailing, 8)
-                        }
-                        Spacer()
-                    }
                 }
-                
-                // Card name
-                Text(card.name)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .frame(maxWidth: .infinity)
             }
         }
         .buttonStyle(PlainButtonStyle())
