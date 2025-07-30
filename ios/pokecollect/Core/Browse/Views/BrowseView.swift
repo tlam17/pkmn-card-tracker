@@ -7,6 +7,11 @@
 
 import SwiftUI
 
+enum BrowseNavigation {
+    case setsList
+    case setDetail(CardSet)
+}
+
 struct BrowseView: View {
     
     // MARK: - State Properties
@@ -16,6 +21,7 @@ struct BrowseView: View {
     @State private var cardSets: [CardSet] = []
     @State private var errorMessage: String? = nil
     @State private var hasLoadedData = false
+    @State private var currentNavigation: BrowseNavigation = .setsList
     
     // MARK: - Services
     private let cardSetsService: CardSetsServiceProtocol
@@ -76,22 +82,28 @@ struct BrowseView: View {
                 )
                 .ignoresSafeArea()
                 
-                VStack(spacing: 0) {
-                    // Header Section
-                    headerSection
-                    
-                    // Search Bar
-                    searchSection
-                    
-                    // Content
-                    if isLoading {
-                        loadingView
-                    } else if let errorMessage = errorMessage {
-                        errorView(message: errorMessage)
-                    } else if organizedSeries.isEmpty && hasLoadedData {
-                        emptyStateView
-                    } else {
-                        seriesListView
+                // Content based on current navigation
+                Group {
+                    switch currentNavigation {
+                    case .setsList:
+                        setsListContent
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .leading).combined(with: .opacity),
+                                removal: .move(edge: .trailing).combined(with: .opacity)
+                            ))
+                    case .setDetail(let cardSet):
+                        SetDetailView(
+                            cardSet: cardSet,
+                            onBack: {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    currentNavigation = .setsList
+                                }
+                            }
+                        )
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .trailing).combined(with: .opacity),
+                            removal: .move(edge: .leading).combined(with: .opacity)
+                        ))
                     }
                 }
             }
@@ -100,6 +112,28 @@ struct BrowseView: View {
         .onAppear {
             if !hasLoadedData {
                 loadCardSets()
+            }
+        }
+    }
+    
+    // MARK: - Sets List Content
+    private var setsListContent: some View {
+        VStack(spacing: 0) {
+            // Header Section
+            headerSection
+            
+            // Search Bar
+            searchSection
+            
+            // Content
+            if isLoading {
+                loadingView
+            } else if let errorMessage = errorMessage {
+                errorView(message: errorMessage)
+            } else if organizedSeries.isEmpty && hasLoadedData {
+                emptyStateView
+            } else {
+                seriesListView
             }
         }
         .refreshable {
@@ -119,12 +153,6 @@ private extension BrowseView {
                         .font(.largeTitle)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
-                    
-                    if !cardSets.isEmpty {
-                        Text("\(cardSets.count) sets available")
-                            .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.8))
-                    }
                 }
                 
                 Spacer()
@@ -253,6 +281,11 @@ private extension BrowseView {
                         isExpanded: expandedSeries.contains(series.name),
                         onToggle: {
                             toggleSeries(series.name)
+                        },
+                        onSetTapped: { cardSet in
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                currentNavigation = .setDetail(cardSet)
+                            }
                         }
                     )
                 }
@@ -337,6 +370,7 @@ struct SeriesDropdownView: View {
     let series: Series
     let isExpanded: Bool
     let onToggle: () -> Void
+    let onSetTapped: (CardSet) -> Void
     
     var body: some View {
         VStack(spacing: 0) {
@@ -386,7 +420,9 @@ struct SeriesDropdownView: View {
             if isExpanded {
                 VStack(spacing: 8) {
                     ForEach(series.sets) { set in
-                        SetRowView(set: set)
+                        SetRowView(set: set, onTap: {
+                            onSetTapped(set)
+                        })
                     }
                 }
                 .padding(.horizontal, 20)
@@ -414,12 +450,10 @@ struct SeriesDropdownView: View {
 // MARK: - Set Row Component
 struct SetRowView: View {
     let set: CardSet
+    let onTap: () -> Void
     
     var body: some View {
-        Button(action: {
-            // TODO: Navigate to set detail
-            print("Tapped on set: \(set.name)")
-        }) {
+        Button(action: onTap) {
             HStack(spacing: 16) {
                 // Set logo/symbol image
                 ZStack {
