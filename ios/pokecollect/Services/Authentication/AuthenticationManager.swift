@@ -35,8 +35,6 @@ final class AuthenticationManager: ObservableObject {
         
         // Check if user is already logged in on launch
         checkAuthenticationStatus()
-        
-        logout()
     }
     
     // MARK: - Public Authentication Methods
