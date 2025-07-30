@@ -5,14 +5,6 @@
 //  Created by Tyler Lam on 7/15/25.
 //
 
-
-//
-//  ImageCacheService.swift
-//  pokecollect
-//
-//  Created by Tyler Lam on 7/15/25.
-//
-
 import SwiftUI
 import Foundation
 
