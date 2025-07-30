@@ -18,8 +18,6 @@ struct SetDetailView: View {
     @State private var isLoading = false
     @State private var errorMessage: String? = nil
     @State private var searchText = ""
-    @State private var selectedCard: Card? = nil
-    @State private var showingCardDetail = false
     
     // MARK: - Services
     private let cardsService: CardsServiceProtocol
@@ -103,14 +101,6 @@ struct SetDetailView: View {
         }
         .refreshable {
             await refreshCards()
-        }
-        .sheet(isPresented: $showingCardDetail) {
-            if let selectedCard = selectedCard {
-                CardDetailView(card: selectedCard) {
-                    showingCardDetail = false
-                    self.selectedCard = nil
-                }
-            }
         }
     }
 }
@@ -344,10 +334,7 @@ private extension SetDetailView {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 16) {
                 ForEach(sortedCards) { card in
-                    CardGridItemView(card: card) {
-                        selectedCard = card
-                        showingCardDetail = true
-                    }
+                    CardGridItemView(card: card) {}
                 }
             }
             .padding(.horizontal, 20)
@@ -431,82 +418,6 @@ struct CardGridItemView: View {
         .buttonStyle(PlainButtonStyle())
         .scaleEffect(1.0)
         .animation(.easeInOut(duration: 0.1), value: false)
-    }
-}
-
-// MARK: - Card Detail View (Modal)
-struct CardDetailView: View {
-    let card: Card
-    let onDismiss: () -> Void
-    
-    var body: some View {
-        ZStack {
-            // Background
-            Color.black.opacity(0.9)
-                .ignoresSafeArea()
-                .onTapGesture {
-                    onDismiss()
-                }
-            
-            VStack(spacing: 20) {
-                // Close button
-                HStack {
-                    Spacer()
-                    Button(action: onDismiss) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 30))
-                            .foregroundColor(.white.opacity(0.8))
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                
-                // Card image (large)
-                if let imageUrl = card.bestImageUrl {
-                    CachedAsyncImage(url: imageUrl) {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            .scaleEffect(1.2)
-                    }
-                    .aspectRatio(0.7, contentMode: .fit)
-                    .frame(maxHeight: UIScreen.main.bounds.height * 0.6)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
-                } else {
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.gray.opacity(0.3))
-                        .aspectRatio(0.7, contentMode: .fit)
-                        .frame(maxHeight: UIScreen.main.bounds.height * 0.6)
-                        .overlay(
-                            VStack(spacing: 12) {
-                                Image(systemName: "photo")
-                                    .font(.system(size: 40))
-                                    .foregroundColor(.white.opacity(0.6))
-                                
-                                Text("No Image Available")
-                                    .font(.headline)
-                                    .foregroundColor(.white.opacity(0.8))
-                            }
-                        )
-                }
-                
-                // Card info
-                VStack(spacing: 12) {
-                    Text(card.name)
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                        .multilineTextAlignment(.center)
-                    
-                    Text("Card #\(card.displayNumber)")
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.8))
-                }
-                .padding(.horizontal, 20)
-                
-                Spacer()
-            }
-        }
     }
 }
 
