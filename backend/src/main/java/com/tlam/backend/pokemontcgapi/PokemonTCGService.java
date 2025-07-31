@@ -253,6 +253,7 @@ public class PokemonTCGService {
                         .language(Language.ENGLISH) // Default to English, can be extended later
                         .symbolUrl(dto.getImages() != null ? dto.getImages().getSymbol() : null)
                         .logoUrl(dto.getImages() != null ? dto.getImages().getLogo() : null)
+                        .printedTotal(dto.getPrintedTotal() != null ? dto.getPrintedTotal() : 0)
                         .totalCards(dto.getTotal() != null ? dto.getTotal() : dto.getPrintedTotal())
                         .releaseDate(parseReleaseDate(dto.getReleaseDate()))
                         .build();

@@ -52,6 +52,11 @@ public class CardSet {
 
     @NotNull
     @Positive
+    @Column(nullable = false, name = "printed_total")
+    private Integer printedTotal;
+
+    @NotNull
+    @Positive
     @Column(nullable = false, name = "total_cards")
     private Integer totalCards;
 

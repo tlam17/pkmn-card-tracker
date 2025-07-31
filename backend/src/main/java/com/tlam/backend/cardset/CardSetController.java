@@ -99,6 +99,7 @@ public class CardSetController {
                 .language(cardSet.getLanguage().name())
                 .symbolUrl(cardSet.getSymbolUrl())
                 .logoUrl(cardSet.getLogoUrl())
+                .printedTotal(cardSet.getPrintedTotal())
                 .totalCards(cardSet.getTotalCards())
                 .releaseDate(cardSet.getReleaseDate())
                 .build();

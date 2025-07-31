@@ -22,6 +22,7 @@ public class CardSetDTO {
     private String language;
     private String symbolUrl;
     private String logoUrl;
+    private Integer printedTotal;
     private Integer totalCards;
     private LocalDate releaseDate;
 }
