@@ -15,6 +15,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -50,13 +51,12 @@ public class CardSet {
     @Column(name = "logo_url")
     private String logoUrl;
 
-    @NotNull
-    @Positive
+    @PositiveOrZero
     @Column(nullable = false, name = "printed_total")
     private Integer printedTotal;
 
     @NotNull
-    @Positive
+    @PositiveOrZero
     @Column(nullable = false, name = "total_cards")
     private Integer totalCards;
 

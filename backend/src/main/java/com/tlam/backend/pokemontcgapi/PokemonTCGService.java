@@ -246,6 +246,18 @@ public class PokemonTCGService {
 
         for (PokemonTCGSetDTO dto : dtos) {
             try {
+                Integer printedTotal = dto.getPrintedTotal();
+                Integer total = dto.getTotal();
+
+                // If both are null, skip this set or use a default value
+                if (total == null && printedTotal == null) {
+                    log.warn("Set {} has null total and printedTotal, using default value 0", dto.getId());
+                    total = 0;
+                }
+
+                // Use total if available, otherwise use printedTotal, otherwise 0
+                Integer finalTotal = total != null ? total : (printedTotal != null ? printedTotal : 0);
+            
                 CardSet cardSet = CardSet.builder()
                         .id(dto.getId())
                         .name(dto.getName())
@@ -253,14 +265,14 @@ public class PokemonTCGService {
                         .language(Language.ENGLISH) // Default to English, can be extended later
                         .symbolUrl(dto.getImages() != null ? dto.getImages().getSymbol() : null)
                         .logoUrl(dto.getImages() != null ? dto.getImages().getLogo() : null)
-                        .printedTotal(dto.getPrintedTotal() != null ? dto.getPrintedTotal() : 0)
-                        .totalCards(dto.getTotal() != null ? dto.getTotal() : dto.getPrintedTotal())
+                        .printedTotal(printedTotal)
+                        .totalCards(finalTotal)
                         .releaseDate(parseReleaseDate(dto.getReleaseDate()))
                         .build();
                 
                 cardSets.add(cardSet);
-                log.debug("Converted set: {} ({}) - {} cards", 
-                         cardSet.getName(), cardSet.getId(), cardSet.getTotalCards());
+                log.debug("Converted set: {} ({}) - {} cards (printed: {})", 
+                     cardSet.getName(), cardSet.getId(), cardSet.getTotalCards(), cardSet.getPrintedTotal());
             } catch (Exception e) {
                 log.warn("Failed to convert set DTO to entity: {} - {}", dto.getId(), e.getMessage());
             }
