@@ -5,14 +5,6 @@
 //  Created by Tyler Lam on 7/15/25.
 //
 
-
-//
-//  CardSetsService.swift
-//  pokecollect
-//
-//  Created by Tyler Lam on 7/15/25.
-//
-
 import Foundation
 
 // MARK: - CardSets Service Protocol
@@ -90,6 +82,7 @@ final class MockCardSetsService: CardSetsServiceProtocol {
                     language: "ENGLISH",
                     symbolUrl: nil,
                     logoUrl: nil,
+                    printedTotal: 162,
                     totalCards: 226,
                     releaseDate: "2024-05-24"
                 ),
@@ -100,6 +93,7 @@ final class MockCardSetsService: CardSetsServiceProtocol {
                     language: "ENGLISH",
                     symbolUrl: nil,
                     logoUrl: nil,
+                    printedTotal: 157,
                     totalCards: 218,
                     releaseDate: "2024-03-22"
                 )

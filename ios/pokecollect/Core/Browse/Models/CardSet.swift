@@ -15,6 +15,7 @@ struct CardSet: Codable, Identifiable {
     let language: String
     let symbolUrl: String?
     let logoUrl: String?
+    let printedTotal: Int
     let totalCards: Int
     let releaseDate: String // We'll keep as String since the backend sends it as "yyyy-MM-dd"
     
@@ -39,6 +40,7 @@ struct CardSet: Codable, Identifiable {
         language: "ENGLISH",
         symbolUrl: "https://images.pokemontcg.io/sv6/symbol.png",
         logoUrl: "https://images.pokemontcg.io/sv6/logo.png",
+        printedTotal: 162,
         totalCards: 226,
         releaseDate: "2024-05-24"
     )
