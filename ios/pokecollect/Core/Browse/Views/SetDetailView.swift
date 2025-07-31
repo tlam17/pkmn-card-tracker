@@ -7,6 +7,22 @@
 
 import SwiftUI
 
+enum SetDetailNavigation: Equatable {
+    case cardsList
+    case cardDetail(Card)
+    
+    static func == (lhs: SetDetailNavigation, rhs: SetDetailNavigation) -> Bool {
+        switch (lhs, rhs) {
+        case (.cardsList, .cardsList):
+            return true
+        case (.cardDetail(let lhsCard), .cardDetail(let rhsCard)):
+            return lhsCard.id == rhsCard.id
+        default:
+            return false
+        }
+    }
+}
+
 struct SetDetailView: View {
     
     // MARK: - Properties
@@ -18,6 +34,7 @@ struct SetDetailView: View {
     @State private var isLoading = false
     @State private var errorMessage: String? = nil
     @State private var searchText = ""
+    @State private var currentNavigation: SetDetailNavigation = .cardsList
     
     // MARK: - Services
     private let cardsService: CardsServiceProtocol
@@ -73,34 +90,67 @@ struct SetDetailView: View {
             )
             .ignoresSafeArea()
             
-            VStack(spacing: 0) {
-                // Header Section
-                headerSection
-                
-                // Search Bar
-                if !cards.isEmpty {
-                    searchSection
-                }
-                
-                // Content
-                if isLoading {
-                    loadingView
-                } else if let errorMessage = errorMessage {
-                    errorView(message: errorMessage)
-                } else if sortedCards.isEmpty && !cards.isEmpty {
-                    noSearchResultsView
-                } else if cards.isEmpty {
-                    emptyStateView
-                } else {
-                    cardsGridView
+            // Content based on current navigation
+            Group {
+                switch currentNavigation {
+                case .cardsList:
+                    cardsListContent
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .leading).combined(with: .opacity),
+                            removal: .move(edge: .trailing).combined(with: .opacity)
+                        ))
+                case .cardDetail(let card):
+                    CardDetailView(
+                        card: card,
+                        cardSet: cardSet,
+                        onBack: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                currentNavigation = .cardsList
+                            }
+                        }
+                    )
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                        removal: .move(edge: .leading).combined(with: .opacity)
+                    ))
                 }
             }
         }
         .onAppear {
-            loadCards()
+            if currentNavigation == .cardsList && cards.isEmpty {
+                loadCards()
+            }
         }
         .refreshable {
-            await refreshCards()
+            if currentNavigation == .cardsList {
+                await refreshCards()
+            }
+        }
+    }
+    
+    // MARK: - Cards List Content
+    private var cardsListContent: some View {
+        VStack(spacing: 0) {
+            // Header Section
+            headerSection
+            
+            // Search Bar
+            if !cards.isEmpty {
+                searchSection
+            }
+            
+            // Content
+            if isLoading {
+                loadingView
+            } else if let errorMessage = errorMessage {
+                errorView(message: errorMessage)
+            } else if sortedCards.isEmpty && !cards.isEmpty {
+                noSearchResultsView
+            } else if cards.isEmpty {
+                emptyStateView
+            } else {
+                cardsGridView
+            }
         }
     }
 }
@@ -176,6 +226,12 @@ private extension SetDetailView {
                     Text(cardSet.series)
                         .font(.subheadline)
                         .foregroundColor(.white.opacity(0.8))
+                    
+                    if !cards.isEmpty {
+                        Text("\(cards.count) cards")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.7))
+                    }
                 }
                 
                 Spacer()
@@ -334,7 +390,18 @@ private extension SetDetailView {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 16) {
                 ForEach(sortedCards) { card in
-                    CardGridItemView(card: card) {}
+                    CardGridItemView(
+                        card: card,
+                        onTap: {
+                            // This will be used for quick actions like add to collection
+                            print("Card tapped: \(card.name)")
+                        },
+                        onViewDetails: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                currentNavigation = .cardDetail(card)
+                            }
+                        }
+                    )
                 }
             }
             .padding(.horizontal, 20)
@@ -383,6 +450,9 @@ private extension SetDetailView {
 struct CardGridItemView: View {
     let card: Card
     let onTap: () -> Void
+    let onViewDetails: () -> Void
+    
+    @State private var isPressed = false
     
     var body: some View {
         Button(action: onTap) {
@@ -416,8 +486,29 @@ struct CardGridItemView: View {
             }
         }
         .buttonStyle(PlainButtonStyle())
-        .scaleEffect(1.0)
-        .animation(.easeInOut(duration: 0.1), value: false)
+        .scaleEffect(isPressed ? 0.95 : 1.0)
+        .contextMenu {
+            // Context menu for additional actions
+            Button(action: onViewDetails) {
+                Label("View Details", systemImage: "info.circle")
+            }
+            
+            Button(action: onTap) {
+                Label("Add to Collection", systemImage: "plus.circle")
+            }
+            
+            Button(action: {
+                // Future wishlist functionality
+                print("Add to wishlist: \(card.name)")
+            }) {
+                Label("Add to Wishlist", systemImage: "heart")
+            }
+        }
+        .onLongPressGesture(minimumDuration: 0.1, maximumDistance: .infinity, pressing: { pressing in
+            withAnimation(.easeInOut(duration: 0.1)) {
+                isPressed = pressing
+            }
+        }, perform: {})
     }
 }
 
