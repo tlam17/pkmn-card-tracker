@@ -17,6 +17,7 @@ public class CardDTO {
     private String id;
     private String name;
     private String number;
+    private String rarity;
     private String smallImageUrl;
     private String largeImageUrl;
 }
