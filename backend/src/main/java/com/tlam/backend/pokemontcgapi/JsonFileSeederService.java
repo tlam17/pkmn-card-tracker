@@ -1,6 +1,7 @@
 package com.tlam.backend.pokemontcgapi;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -10,6 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -118,39 +121,46 @@ public class JsonFileSeederService {
     }
 
     /**
-     * Seeds only cards from JSON files
+     * Seeds only cards from JSON files using Spring's resource loading
      */
     public void seedCardsFromJsonFiles() {
         log.info("Seeding cards from JSON files");
 
         try {
-            // Get the cards directory path (English cards)
-            Path cardsPath = getResourcePath("pokemon-tcg-data/cards/en");
+            // Use Spring's resource loading for better JAR compatibility
+            String cardsBasePath = "pokemon-tcg-data/cards/en";
             
-            if (!Files.exists(cardsPath)) {
-                log.error("Cards directory not found at: {}", cardsPath);
-                throw new RuntimeException("Cards directory not found. Please download and place JSON files in resources/pokemon-tcg-data/cards/en/");
-            }
-
+            // Get all JSON files in the cards directory
+            // Note: This approach requires you to have a way to list files
+            // Since we can't easily list files in a JAR, we'll try a different approach
+            
+            // For now, let's try to load specific known set files
+            // You might need to maintain a list of set IDs or use a different approach
+            List<String> knownSetIds = getKnownSetIds();
+            
             List<Card> allCards = new ArrayList<>();
 
-            // Process each set JSON file under cards/en/
-            try (Stream<Path> cardFiles = Files.list(cardsPath)) {
-                cardFiles.filter(path -> path.toString().endsWith(".json"))
-                         .forEach(cardFile -> {
-                             try {
-                                 List<Card> setCards = processSetCardsFile(cardFile);
-                                 allCards.addAll(setCards);
-                             } catch (Exception e) {
-                                 log.error("Error processing set cards file: {}", cardFile, e);
-                             }
-                         });
+            for (String setId : knownSetIds) {
+                try {
+                    String resourcePath = cardsBasePath + "/" + setId + ".json";
+                    Resource resource = new ClassPathResource(resourcePath);
+                    
+                    if (resource.exists()) {
+                        List<Card> setCards = processSetCardsResource(resource, setId);
+                        allCards.addAll(setCards);
+                        log.debug("Processed {} cards for set: {}", setCards.size(), setId);
+                    } else {
+                        log.debug("Card file not found for set: {} ({})", setId, resourcePath);
+                    }
+                } catch (Exception e) {
+                    log.error("Error processing set cards for set: {}", setId, e);
+                }
             }
 
             // Save all cards to database
             saveCardsToDatabase(allCards);
             
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error("Error reading cards directory", e);
             throw new RuntimeException("Failed to read cards directory", e);
         }
@@ -163,7 +173,19 @@ public class JsonFileSeederService {
         try {
             log.debug("Processing set file: {}", setFile.getFileName());
             
-            JsonNode setNode = objectMapper.readTree(setFile.toFile());
+            JsonNode setNode;
+            
+            // Try to read as regular file first, then as resource
+            try {
+                setNode = objectMapper.readTree(setFile.toFile());
+            } catch (UnsupportedOperationException e) {
+                // If toFile() fails (JAR environment), try as resource
+                String fileName = setFile.getFileName().toString();
+                Resource resource = new ClassPathResource("pokemon-tcg-data/sets/en/" + fileName);
+                try (InputStream inputStream = resource.getInputStream()) {
+                    setNode = objectMapper.readTree(inputStream);
+                }
+            }
             
             return CardSet.builder()
                     .id(getStringValue(setNode, "id"))
@@ -184,21 +206,19 @@ public class JsonFileSeederService {
     }
 
     /**
-     * Process a single set JSON file containing all cards for that set
+     * Process a single set JSON resource containing all cards for that set
      */
-    private List<Card> processSetCardsFile(Path setCardsFile) {
+    private List<Card> processSetCardsResource(Resource resource, String setId) {
         List<Card> cards = new ArrayList<>();
-        String fileName = setCardsFile.getFileName().toString();
-        String setId = fileName.substring(0, fileName.lastIndexOf('.'));
         
-        log.debug("Processing cards file for set: {} ({})", setId, fileName);
+        log.debug("Processing cards resource for set: {}", setId);
 
-        try {
+        try (InputStream inputStream = resource.getInputStream()) {
             // Read the JSON file as an array of card objects
-            JsonNode cardsArray = objectMapper.readTree(setCardsFile.toFile());
+            JsonNode cardsArray = objectMapper.readTree(inputStream);
             
             if (!cardsArray.isArray()) {
-                log.warn("Expected JSON array in cards file: {}", setCardsFile);
+                log.warn("Expected JSON array in cards resource for set: {}", setId);
                 return cards;
             }
 
@@ -210,14 +230,13 @@ public class JsonFileSeederService {
                         cards.add(card);
                     }
                 } catch (Exception e) {
-                    log.error("Error processing individual card in file {}: {}", setCardsFile, e.getMessage());
+                    log.error("Error processing individual card in set {}: {}", setId, e.getMessage());
                 }
             }
         } catch (IOException e) {
-            log.error("Error reading set cards file: {}", setCardsFile, e);
+            log.error("Error reading set cards resource for set: {}", setId, e);
         }
 
-        log.debug("Processed {} cards for set: {}", cards.size(), setId);
         return cards;
     }
 
@@ -256,6 +275,40 @@ public class JsonFileSeederService {
             log.error("Error processing card JSON: {}", e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * Get a list of known set IDs
+     */
+    private List<String> getKnownSetIds() {
+        return List.of(
+            // Base sets
+            "base1", "base2", "basep", "base3", "base4", "base5",
+            // Gym sets
+            "gym1", "gym2",
+            // Neo sets
+            "neo1", "neo2", "si1", "neo3", "neo4", "base6",
+            // E-Card sets
+            "ecard1", "bp", "ecard2", "ecard3",
+            // EX sets
+            "ex1", "ex2", "np", "ex3", "ex4", "ex5", "tk1b", "tk1a", "ex6", "pop1", "ex7", "ex8", "ex9", "ex10", "pop2", "ex11", "ex12", "tk2b", "tk2a", "pop3", "ex13", "ex14", "pop4", "ex15", "ex16", "pop5",
+            // Diamond & Pearl sets
+            "dpp", "dp1", "dp2", "pop6", "dp3", "dp4", "pop7", "dp5", "dp6", "pop8", "dp7",
+            // Platinum sets
+            "pl1", "pop9", "pl2", "pl3", "pl4", "ru1",
+            // HeartGold & SoulSilver sets
+            "hsp", "hgss1", "hgss2", "hgss3", "hgss4", "col1",
+            // Black & White sets
+            "bwp", "bw1", "mcd11", "bw2", "bw3", "bw4", "bw5", "mcd12", "bw6", "dv1", "bw7", "bw8", "bw9", "bw10", "bw11", "mcd14", "mcd15", "mcd16",
+            // X & Y sets
+            "xyp", "xy0", "xy1", "xy2", "xy3", "xy4", "xy5", "dc1", "xy6", "xy7", "xy8", "xy9", "g1", "xy10", "xy11", "xy12",
+            // Sun & Moon sets
+            "smp", "sm1", "sm2", "sm3", "sm35", "sm4", "mcd17", "sm5", "sm6", "sm7", "sm75", "mcd18", "sm8", "sm9", "det1", "sm10", "sm11", "sm115", "sma", "mcd19", "sm12",
+            // Sword & Shield sets
+            "swshp", "swsh1", "swsh2", "swsh3", "fut20", "swsh35", "swsh4", "mcd21", "swsh45sv", "swsh45", "swsh5", "swsh6", "swsh7", "cel25c", "cel25", "swsh8", "swsh9", "swsh9tg", "swsh10", "swsh10tg", "pgo", "mcd22", "swsh11", "swsh11tg", "swsh12", "swsh12tg",
+            // Scarlet & Violet sets
+            "svp", "swsh12pt5", "swsh12pt5gg", "sve", "sv1", "sv2", "sv3", "sv3pt5", "sv4", "sv4pt5", "sv5", "sv6", "sv6pt5", "sv7", "sv8", "sv8pt5", "sv9", "sv10", "zsv10pt5", "rsv10pt5"
+        );
     }
 
     /**
