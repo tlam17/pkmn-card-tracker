@@ -81,6 +81,7 @@ final class MockCardsService: CardsServiceProtocol {
                     id: "sv5-1",
                     name: "Charmander",
                     number: "001",
+                    rarity: "Common",
                     smallImageUrl: "https://images.pokemontcg.io/sv5/1.png",
                     largeImageUrl: "https://images.pokemontcg.io/sv5/1_hires.png"
                 ),
@@ -88,6 +89,7 @@ final class MockCardsService: CardsServiceProtocol {
                     id: "sv5-2",
                     name: "Charmeleon",
                     number: "002",
+                    rarity: "Common",
                     smallImageUrl: "https://images.pokemontcg.io/sv5/2.png",
                     largeImageUrl: "https://images.pokemontcg.io/sv5/2_hires.png"
                 )
