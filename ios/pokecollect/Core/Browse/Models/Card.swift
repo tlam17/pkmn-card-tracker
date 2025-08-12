@@ -12,6 +12,7 @@ struct Card: Codable, Identifiable {
     let id: String
     let name: String
     let number: String
+    let rarity: String
     let smallImageUrl: String?
     let largeImageUrl: String?
     
@@ -34,6 +35,7 @@ struct Card: Codable, Identifiable {
         id: "sv6-1",
         name: "Bulbasaur",
         number: "001",
+        rarity: "Common",
         smallImageUrl: "https://images.pokemontcg.io/sv6/1.png",
         largeImageUrl: "https://images.pokemontcg.io/sv6/1_hires.png"
     )
@@ -43,6 +45,7 @@ struct Card: Codable, Identifiable {
             id: "sv6-1",
             name: "Bulbasaur",
             number: "001",
+            rarity: "Common",
             smallImageUrl: "https://images.pokemontcg.io/sv6/1.png",
             largeImageUrl: "https://images.pokemontcg.io/sv6/1_hires.png"
         ),
@@ -50,6 +53,7 @@ struct Card: Codable, Identifiable {
             id: "sv6-2",
             name: "Ivysaur",
             number: "002",
+            rarity: "Common",
             smallImageUrl: "https://images.pokemontcg.io/sv6/2.png",
             largeImageUrl: "https://images.pokemontcg.io/sv6/2_hires.png"
         ),
@@ -57,6 +61,7 @@ struct Card: Codable, Identifiable {
             id: "sv6-3",
             name: "Venusaur",
             number: "003",
+            rarity: "Common",
             smallImageUrl: "https://images.pokemontcg.io/sv6/3.png",
             largeImageUrl: "https://images.pokemontcg.io/sv6/3_hires.png"
         )
