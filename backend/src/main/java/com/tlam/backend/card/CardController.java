@@ -64,6 +64,7 @@ public class CardController {
                 .id(card.getId())
                 .name(card.getName())
                 .number(card.getNumber())
+                .rarity(card.getRarity())
                 .smallImageUrl(card.getSmallImageUrl())
                 .largeImageUrl(card.getLargeImageUrl())
                 .build();
