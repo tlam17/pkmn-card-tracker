@@ -134,7 +134,7 @@ private extension CardDetailView {
                             
                             Spacer()
                             
-                            Text("#\(card.displayNumber)")
+                            Text("#\(card.displayNumber) / \(cardSet.printedTotal)")
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.yellow)
@@ -221,22 +221,6 @@ private extension CardDetailView {
     
     var cardInfoSection: some View {
         VStack(spacing: 16) {
-            // Quick stats
-            HStack(spacing: 16) {
-                StatBoxView(
-                    title: "Card Number",
-                    value: "#\(card.displayNumber)",
-                    icon: "number"
-                )
-                
-                StatBoxView(
-                    title: "Set",
-                    value: cardSet.name,
-                    icon: "rectangle.stack"
-                )
-            }
-            .padding(.horizontal, 20)
-            
             // Additional details section
             VStack(spacing: 12) {
                 HStack {
@@ -255,8 +239,8 @@ private extension CardDetailView {
                     )
                     
                     DetailRowView(
-                        label: "Card ID",
-                        value: card.id
+                        label: "Rarity",
+                        value: card.rarity
                     )
                     
                     DetailRowView(
