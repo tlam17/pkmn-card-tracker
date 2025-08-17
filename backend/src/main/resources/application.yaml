@@ -18,3 +18,9 @@ pokemon-tcg:
   base-url: https://api.pokemontcg.io/v2
   connect-timeout: 30000
   read-timeout: 30000
+
+aws:
+  s3:
+    bucket-name: ${AWS_S3_BUCKET_NAME}
+    region: ${AWS_REGION}
+    cloudfront-domain: ${AWS_CLOUDFRONT_DOMAIN}
