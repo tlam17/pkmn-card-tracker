@@ -234,7 +234,7 @@ private extension CardDetailView {
                 
                 VStack(spacing: 8) {
                     DetailRowView(
-                        label: "Full Name",
+                        label: "Name",
                         value: card.name
                     )
                     
@@ -262,13 +262,6 @@ private extension CardDetailView {
                         label: "Language",
                         value: cardSet.language
                     )
-                    
-                    if card.largeImageUrl != nil || card.smallImageUrl != nil {
-                        DetailRowView(
-                            label: "Image Available",
-                            value: "✓ Yes"
-                        )
-                    }
                 }
             }
             .padding(.horizontal, 20)
