@@ -2,21 +2,21 @@ package com.tlam.backend.pokemontcgapi;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
 
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tlam.backend.aws.S3ImageService;
 import com.tlam.backend.card.Card;
 import com.tlam.backend.card.CardRepository;
 import com.tlam.backend.cardset.CardSet;
@@ -39,14 +39,19 @@ public class JsonFileSeederService {
     private final CardSetRepository cardSetRepository;
     private final CardRepository cardRepository;
     private final ObjectMapper objectMapper;
+    private final S3ImageService s3ImageService;
+    private final RestTemplate restTemplate;
 
     // Date formatter for parsing API date format (YYYY/MM/DD)
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy/MM/dd");
 
-    public JsonFileSeederService(CardSetRepository cardSetRepository, CardRepository cardRepository) {
+    public JsonFileSeederService(CardSetRepository cardSetRepository, CardRepository cardRepository, 
+                                S3ImageService s3ImageService) {
         this.cardSetRepository = cardSetRepository;
         this.cardRepository = cardRepository;
+        this.s3ImageService = s3ImageService;
         this.objectMapper = new ObjectMapper();
+        this.restTemplate = new RestTemplate();
     }
 
     /**
@@ -54,10 +59,7 @@ public class JsonFileSeederService {
      * Expected directory structure:
      * resources/pokemon-tcg-data/
      *   ├── sets/
-     *   │   ├── en/
-     *   │   │   ├── base1.json
-     *   │   │   ├── base2.json
-     *   │   │   └── ...
+     *   │   ├── en.json (contains array of all sets)
      *   └── cards/
      *       └── en/
      *           ├── base1.json (contains array of all cards for base1 set)
@@ -86,37 +88,23 @@ public class JsonFileSeederService {
         log.info("Seeding sets from JSON files");
 
         try {
-            // Get the sets directory path (English sets)
-            Path setsPath = getResourcePath("pokemon-tcg-data/sets/en");
+            // Load the single sets file containing all sets
+            String setsFilePath = "pokemon-tcg-data/sets/en.json";
+            Resource setsResource = new ClassPathResource(setsFilePath);
             
-            if (!Files.exists(setsPath)) {
-                log.error("Sets directory not found at: {}", setsPath);
-                throw new RuntimeException("Sets directory not found. Please download and place JSON files in resources/pokemon-tcg-data/sets/en/");
+            if (!setsResource.exists()) {
+                log.error("Sets file not found at: {}", setsFilePath);
+                throw new RuntimeException("Sets file not found. Please download and place en.json file in resources/pokemon-tcg-data/sets/");
             }
 
-            List<CardSet> allSets = new ArrayList<>();
-
-            // Process each set JSON file
-            try (Stream<Path> files = Files.list(setsPath)) {
-                files.filter(path -> path.toString().endsWith(".json"))
-                     .forEach(setFile -> {
-                         try {
-                             CardSet cardSet = processSetFile(setFile);
-                             if (cardSet != null) {
-                                 allSets.add(cardSet);
-                             }
-                         } catch (Exception e) {
-                             log.error("Error processing set file: {}", setFile, e);
-                         }
-                     });
-            }
+            List<CardSet> allSets = processAllSetsFromFile(setsResource);
 
             // Save all sets to database
             saveSetsToDatabase(allSets);
             
-        } catch (IOException e) {
-            log.error("Error reading sets directory", e);
-            throw new RuntimeException("Failed to read sets directory", e);
+        } catch (Exception e) {
+            log.error("Error reading sets file", e);
+            throw new RuntimeException("Failed to read sets file", e);
         }
     }
 
@@ -167,40 +155,64 @@ public class JsonFileSeederService {
     }
 
     /**
-     * Process a single set JSON file
+     * Process all sets from a single JSON file containing an array of sets
      */
-    private CardSet processSetFile(Path setFile) {
-        try {
-            log.debug("Processing set file: {}", setFile.getFileName());
+    private List<CardSet> processAllSetsFromFile(Resource setsResource) {
+        List<CardSet> allSets = new ArrayList<>();
+        
+        try (InputStream inputStream = setsResource.getInputStream()) {
+            log.debug("Processing sets from file: {}", setsResource.getFilename());
             
-            JsonNode setNode;
+            // Read the JSON file as an array of set objects
+            JsonNode setsArray = objectMapper.readTree(inputStream);
             
-            // Try to read as regular file first, then as resource
-            try {
-                setNode = objectMapper.readTree(setFile.toFile());
-            } catch (UnsupportedOperationException e) {
-                // If toFile() fails (JAR environment), try as resource
-                String fileName = setFile.getFileName().toString();
-                Resource resource = new ClassPathResource("pokemon-tcg-data/sets/en/" + fileName);
-                try (InputStream inputStream = resource.getInputStream()) {
-                    setNode = objectMapper.readTree(inputStream);
+            if (!setsArray.isArray()) {
+                log.warn("Expected JSON array in sets file, got: {}", setsArray.getNodeType());
+                return allSets;
+            }
+
+            // Process each set in the array
+            for (JsonNode setNode : setsArray) {
+                try {
+                    CardSet cardSet = processSetNode(setNode);
+                    if (cardSet != null) {
+                        allSets.add(cardSet);
+                    }
+                } catch (Exception e) {
+                    log.error("Error processing individual set: {}", e.getMessage());
                 }
             }
             
+            log.info("Successfully processed {} sets from file", allSets.size());
+            
+        } catch (IOException e) {
+            log.error("Error reading sets file: {}", e.getMessage());
+        }
+
+        return allSets;
+    }
+
+    /**
+     * Process a single set JSON node from the sets array
+     */
+    private CardSet processSetNode(JsonNode setNode) {
+        try {
+            String setId = getStringValue(setNode, "id");
+            
             return CardSet.builder()
-                    .id(getStringValue(setNode, "id"))
+                    .id(setId)
                     .name(getStringValue(setNode, "name"))
                     .series(getStringValue(setNode, "series"))
                     .language(Language.ENGLISH) // Default to English, can be extended later
-                    .symbolUrl(getImageValue(setNode, "symbol"))
-                    .logoUrl(getImageValue(setNode, "logo"))
+                    .symbolUrl(uploadImageToS3(getImageValue(setNode, "symbol"), setId + "_symbol.png", "sets"))
+                    .logoUrl(uploadImageToS3(getImageValue(setNode, "logo"), setId + "_logo.png", "sets"))
                     .printedTotal(getIntValue(setNode, "printedTotal"))
                     .totalCards(getIntValue(setNode, "total"))
                     .releaseDate(parseReleaseDate(getStringValue(setNode, "releaseDate")))
                     .build();
                     
         } catch (Exception e) {
-            log.error("Error processing set file: {}", setFile, e);
+            log.error("Error processing set node: {}", e.getMessage());
             return null;
         }
     }
@@ -267,8 +279,8 @@ public class JsonFileSeederService {
                     .number(getStringValue(cardNode, "number"))
                     .setId(setId)
                     .rarity(getStringValue(cardNode, "rarity"))
-                    .smallImageUrl(getImageValue(cardNode, "small"))
-                    .largeImageUrl(getImageValue(cardNode, "large"))
+                    .smallImageUrl(uploadImageToS3(getImageValue(cardNode, "small"), cardId + "_small.png", "cards"))
+                    .largeImageUrl(uploadImageToS3(getImageValue(cardNode, "large"), cardId + "_large.png", "cards"))
                     .build();
                     
         } catch (Exception e) {
@@ -350,24 +362,6 @@ public class JsonFileSeederService {
         return null;
     }
 
-    /**
-     * Get resource path for JSON files
-     */
-    private Path getResourcePath(String relativePath) {
-        try {
-            // Try to get from resources folder
-            var resource = this.getClass().getClassLoader().getResource(relativePath);
-            if (resource != null) {
-                return Paths.get(resource.toURI());
-            }
-            
-            // Fallback to current directory
-            return Paths.get("src/main/resources/" + relativePath);
-        } catch (Exception e) {
-            // Fallback to current directory
-            return Paths.get("src/main/resources/" + relativePath);
-        }
-    }
 
     /**
      * Parses the release date from the API format (YYYY/MM/DD) to LocalDate
@@ -446,5 +440,90 @@ public class JsonFileSeederService {
 
         log.info("Database save complete: {} new cards saved, {} existing cards skipped", 
                 savedCount, skippedCount);
+    }
+
+    /**
+     * Downloads an image from a URL and uploads it to S3, returning the S3 URL
+     * If the operation fails, returns the original URL as fallback
+     */
+    private String uploadImageToS3(String imageUrl, String fileName, String folder) {
+        if (imageUrl == null || imageUrl.trim().isEmpty()) {
+            return null;
+        }
+
+        try {
+            log.debug("Processing image: {} -> {} (folder: {})", imageUrl, fileName, folder);
+            
+            // Download image from URL
+            byte[] imageData = downloadImageWithRetry(imageUrl, 3);
+            if (imageData == null) {
+                log.warn("Failed to download image from URL: {}, using original URL", imageUrl);
+                return imageUrl;
+            }
+
+            // Upload to S3 with specified folder
+            String s3Url = s3ImageService.uploadImage(imageData, fileName, "image/png", folder);
+            log.info("Successfully uploaded image {} to S3 in folder {}: {}", fileName, folder, s3Url);
+            return s3Url;
+            
+        } catch (Exception e) {
+            log.error("Failed to upload image {} to S3 in folder {}, using original URL: {}", fileName, folder, e.getMessage());
+            return imageUrl; // Fallback to original URL
+        }
+    }
+
+    /**
+     * Downloads image data from a URL with retry logic
+     */
+    private byte[] downloadImageWithRetry(String imageUrl, int maxAttempts) {
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                log.debug("Downloading image from URL (attempt {}/{}): {}", attempt, maxAttempts, imageUrl);
+                return downloadImageFromUrl(imageUrl);
+                
+            } catch (Exception e) {
+                log.warn("Failed to download image on attempt {}/{}: {}", attempt, maxAttempts, e.getMessage());
+                
+                if (attempt == maxAttempts) {
+                    log.error("Failed to download image after {} attempts: {}", maxAttempts, imageUrl);
+                    return null;
+                }
+                
+                // Wait before retry (exponential backoff)
+                try {
+                    Thread.sleep(1000 * attempt);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return null;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Downloads image data from a URL and returns it as a byte array
+     */
+    private byte[] downloadImageFromUrl(String imageUrl) throws IOException {
+        try {
+            ResponseEntity<byte[]> response = restTemplate.exchange(
+                imageUrl, 
+                HttpMethod.GET, 
+                null, 
+                byte[].class
+            );
+            
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                log.debug("Successfully downloaded image from URL: {} (size: {} bytes)", 
+                         imageUrl, response.getBody().length);
+                return response.getBody();
+            } else {
+                throw new IOException("Failed to download image: HTTP " + response.getStatusCode());
+            }
+            
+        } catch (Exception e) {
+            log.error("Error downloading image from URL: {}", imageUrl, e);
+            throw new IOException("Failed to download image from URL: " + imageUrl, e);
+        }
     }
 }
