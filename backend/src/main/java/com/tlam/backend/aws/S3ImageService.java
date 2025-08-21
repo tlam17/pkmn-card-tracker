@@ -25,8 +25,13 @@ public class S3ImageService {
 
     // Uploads an image to S3 and returns the URL of the uploaded image
     public String uploadImage(byte[] imageData, String fileName, String contentType) {
+        return uploadImage(imageData, fileName, contentType, "cards");
+    }
+
+    // Uploads an image to S3 with a specified folder and returns the URL of the uploaded image
+    public String uploadImage(byte[] imageData, String fileName, String contentType, String folder) {
         try {
-            String key = "cards/" + fileName;
+            String key = folder + "/" + fileName;
 
             PutObjectRequest putRequest = PutObjectRequest.builder()
                 .bucket(s3Config.getBucketName())
