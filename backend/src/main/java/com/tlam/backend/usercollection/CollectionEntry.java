@@ -10,9 +10,11 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,18 +26,18 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "collection_entries")
+@Table(name = "collection_entries", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "card_id"}))
 public class CollectionEntry {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotNull
-    @Column(nullable = false, name = "user_id")
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
     private Long userId;
 
-    @NotBlank
-    @Column(nullable = false, name = "card_id")
+    @ManyToOne
+    @JoinColumn(name = "card_id", nullable = false)
     private String cardId;
 
     @NotNull
