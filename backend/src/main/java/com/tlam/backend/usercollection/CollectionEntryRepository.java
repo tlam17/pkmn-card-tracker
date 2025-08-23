@@ -15,21 +15,21 @@ public interface CollectionEntryRepository extends JpaRepository<CollectionEntry
     Optional<CollectionEntry> findByUserIdAndCardId(Long userId, String cardId);
 
     // Find all collections entries for a specific set
-    @Query("SELECT ce FROM CollectionEntry ce JOIN ce.card c WHERE ce.userId = :userId AND c.setId = :setId")
+    @Query("SELECT ce FROM CollectionEntry ce WHERE ce.userId = :userId AND ce.cardId LIKE CONCAT(:setId, '-%')")
     List<CollectionEntry> findByUserIdAndCardSetId(@Param("userId") Long userId, @Param("setId") String setId);
 
     // Delete a specific collection entry by userId and cardId
     void deleteByUserIdAndCardId(Long userId, String cardId);
 
     // Count unique cards in a user's collection
-    @Query("SELECT COUNT(DISTINCT ce.card.id) FROM CollectionEntry ce WHERE ce.userId = :userId")
+    @Query("SELECT COUNT(DISTINCT ce.cardId) FROM CollectionEntry ce WHERE ce.userId = :userId")
     Long countUniqueCardsByUserId(@Param("userId") Long userId);
 
     // Count total cards in a user's collection
-    @Query("SELECT COALESCE(SUM(ce.quantity), 0) FROM CollectioNEntry ce WHERE ce.userId = :userId")
+    @Query("SELECT COALESCE(SUM(ce.quantity), 0) FROM CollectionEntry ce WHERE ce.userId = :userId")
     Long countTotalCardsByUserId(@Param("userId") Long userId);
 
     // Count unique cards in a user's collection for a specific set
-    @Query("SELECT COUNT(DISTINCT ce.card.id) FROM CollectionEntry ce JOIN ce.card c WHERE ce.userId = :userId AND c.setId = :setId")
+    @Query("SELECT COUNT(DISTINCT ce.cardId) FROM CollectionEntry ce WHERE ce.userId = :userId AND ce.cardId LIKE CONCAT(:setId, '-%')")
     Long countUniqueCardsByUserIdAndSetId(@Param("userId") Long userId, @Param("setId") String setId);
 }
