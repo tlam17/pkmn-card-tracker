@@ -148,7 +148,7 @@ public class CollectionEntryController {
         @ApiResponse(responseCode = "204", description = "Collection entry successfully deleted"),
         @ApiResponse(responseCode = "404", description = "Collection entry not found")
     })
-    public ResponseEntity<Void> deleteCollectionEntry(
+    public ResponseEntity<Void> removeCollection(
         @Parameter(
             description = "ID of the collection entry to be deleted", 
             example = "1",
