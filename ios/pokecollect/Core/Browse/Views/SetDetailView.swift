@@ -10,12 +10,15 @@ import SwiftUI
 enum SetDetailNavigation: Equatable {
     case cardsList
     case cardDetail(Card)
+    case cardCollection(Card)
     
     static func == (lhs: SetDetailNavigation, rhs: SetDetailNavigation) -> Bool {
         switch (lhs, rhs) {
         case (.cardsList, .cardsList):
             return true
         case (.cardDetail(let lhsCard), .cardDetail(let rhsCard)):
+            return lhsCard.id == rhsCard.id
+        case (.cardCollection(let lhsCard), .cardCollection(let rhsCard)):
             return lhsCard.id == rhsCard.id
         default:
             return false
@@ -101,6 +104,20 @@ struct SetDetailView: View {
                         ))
                 case .cardDetail(let card):
                     CardDetailView(
+                        card: card,
+                        cardSet: cardSet,
+                        onBack: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                currentNavigation = .cardsList
+                            }
+                        }
+                    )
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                        removal: .move(edge: .leading).combined(with: .opacity)
+                    ))
+                case .cardCollection(let card):
+                    CardCollectionView(
                         card: card,
                         cardSet: cardSet,
                         onBack: {
@@ -393,8 +410,9 @@ private extension SetDetailView {
                     CardGridItemView(
                         card: card,
                         onTap: {
-                            // This will be used for quick actions like add to collection
-                            print("Card tapped: \(card.name)")
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                currentNavigation = .cardCollection(card)
+                            }
                         },
                         onViewDetails: {
                             withAnimation(.easeInOut(duration: 0.3)) {
@@ -494,7 +512,7 @@ struct CardGridItemView: View {
             }
             
             Button(action: onTap) {
-                Label("Add to Collection", systemImage: "plus.circle")
+                Label("Manage Collection", systemImage: "square.stack.3d.up")
             }
             
             Button(action: {
