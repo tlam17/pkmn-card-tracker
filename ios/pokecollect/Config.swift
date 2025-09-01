@@ -36,6 +36,9 @@ struct Config {
             static func cardsBySetId(_ setId: String) -> String {
                 return "\(cards)/set/\(setId)"
             }
+            
+            // Collection Endpoints
+            static let collection = "/api/collection"
         }
     }
     
