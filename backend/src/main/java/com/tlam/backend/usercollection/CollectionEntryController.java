@@ -115,33 +115,6 @@ public class CollectionEntryController {
         return ResponseEntity.ok(entryDTOs);
     }
 
-    private CollectionEntryDTO convertToDTO(CollectionEntry entry) {
-        // Fetch card associated with the collection entry
-        Card card = cardRepository.findById(entry.getCardId())
-        .orElseThrow(() -> {
-            log.error("Card with ID {} not found for collection entry {}", 
-                entry.getCardId(), entry.getId());
-            return new RuntimeException("Card not found: " + entry.getCardId());
-        });
-
-        CardDTO cardDTO = CardDTO.builder()
-                .id(card.getId())
-                .name(card.getName())
-                .number(card.getNumber())
-                .rarity(card.getRarity())
-                .smallImageUrl(card.getSmallImageUrl())
-                .largeImageUrl(card.getLargeImageUrl())
-                .build();
-        
-        return CollectionEntryDTO.builder()
-                .id(entry.getId())
-                .userId(entry.getUserId())
-                .quantity(entry.getQuantity())
-                .acquiredDate(entry.getAcquiredDate())
-                .card(cardDTO)
-                .build();
-    }
-
     @DeleteMapping("/delete/{entryId}")
     @Operation(summary = "Delete a collection entry", description = "Deletes a specific collection entry by its ID" )
     @ApiResponses(value = {
@@ -168,5 +141,32 @@ public class CollectionEntryController {
             log.warn("Collection entry with ID {} not found", entryId);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
+    }
+
+    private CollectionEntryDTO convertToDTO(CollectionEntry entry) {
+        // Fetch card associated with the collection entry
+        Card card = cardRepository.findById(entry.getCardId())
+        .orElseThrow(() -> {
+            log.error("Card with ID {} not found for collection entry {}", 
+                entry.getCardId(), entry.getId());
+            return new RuntimeException("Card not found: " + entry.getCardId());
+        });
+
+        CardDTO cardDTO = CardDTO.builder()
+                .id(card.getId())
+                .name(card.getName())
+                .number(card.getNumber())
+                .rarity(card.getRarity())
+                .smallImageUrl(card.getSmallImageUrl())
+                .largeImageUrl(card.getLargeImageUrl())
+                .build();
+        
+        return CollectionEntryDTO.builder()
+                .id(entry.getId())
+                .userId(entry.getUserId())
+                .quantity(entry.getQuantity())
+                .acquiredDate(entry.getAcquiredDate())
+                .card(cardDTO)
+                .build();
     }
 }
