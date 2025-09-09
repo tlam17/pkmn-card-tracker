@@ -14,23 +14,58 @@ struct CardCollectionView: View {
     let cardSet: CardSet
     let onBack: () -> Void
     
-    // MARK: - State Properties
+    // MARK: - State
     @State private var quantity: Int = 0
-    @State private var isLoading = false
-    @State private var showSuccessMessage = false
-    @State private var errorMessage: String? = nil
+    @State private var originalQuantity: Int = 0
+    @State private var isLoading: Bool = false
+    @State private var errorMessage: String?
+    @State private var showSuccessMessage: Bool = false
+    @State private var collectionEntry: CollectionEntry?
+    @State private var showingImageZoom: Bool = false
     
+    // MARK: - Services
+    private let collectionService: CollectionServiceProtocol
+    
+    // MARK: - Image Selection
+    enum ImageType {
+        case large, small
+    }
+    @State private var selectedImageType: ImageType = .large
+    
+    // MARK: - Initialization
+    init(
+        card: Card,
+        cardSet: CardSet,
+        onBack: @escaping () -> Void,
+        collectionService: CollectionServiceProtocol = CollectionService()
+    ) {
+        self.card = card
+        self.cardSet = cardSet
+        self.onBack = onBack
+        self.collectionService = collectionService
+    }
+    
+    // MARK: - Computed Properties
+    private var currentImageUrl: String? {
+        switch selectedImageType {
+        case .large:
+            return card.largeImageUrl ?? card.smallImageUrl
+        case .small:
+            return card.smallImageUrl ?? card.largeImageUrl
+        }
+    }
+    
+    // MARK: - Body
     var body: some View {
         ZStack {
-            // Background gradient (matching your existing theme)
+            // Background gradient (keeping as requested)
             LinearGradient(
                 gradient: Gradient(colors: [
-                    Color.green.opacity(0.9),
-                    Color.teal.opacity(0.7),
-                    Color.mint.opacity(0.8)
+                    Color.black,
+                    Color.gray.opacity(0.3)
                 ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+                startPoint: .top,
+                endPoint: .bottom
             )
             .ignoresSafeArea()
             
@@ -39,32 +74,39 @@ struct CardCollectionView: View {
                     // Header Section
                     headerSection
                     
-                    // Content Section
-                    contentSection
+                    // Card Image Section
+                    cardImageSection
                     
-                    // Bottom padding
+                    // Collection Management Section
+                    collectionSection
+                    
+                    // Bottom padding for navigation
                     Color.clear
                         .frame(height: 100)
                 }
             }
-        }
-        .alert("Error", isPresented: .constant(errorMessage != nil)) {
-            Button("OK") {
-                errorMessage = nil
-            }
-        } message: {
-            if let errorMessage = errorMessage {
-                Text(errorMessage)
-            }
-        }
-        .overlay(
+            
             // Success message overlay
-            Group {
-                if showSuccessMessage {
+            if showSuccessMessage {
+                VStack {
+                    Spacer()
                     successMessageOverlay
+                    Spacer()
                 }
             }
-        )
+        }
+        .fullScreenCover(isPresented: $showingImageZoom) {
+            CardImageZoomView(
+                imageUrl: currentImageUrl,
+                cardName: card.name,
+                onDismiss: {
+                    showingImageZoom = false
+                }
+            )
+        }
+        .task {
+            await loadCollectionData()
+        }
     }
 }
 
@@ -88,224 +130,215 @@ private extension CardCollectionView {
                     .background(
                         RoundedRectangle(cornerRadius: 20)
                             .fill(Color.white.opacity(0.15))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                            )
                     )
                 }
                 
                 Spacer()
             }
+            
+            // Collection title
+            HStack {
+                Text("Manage Your Collection")
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+            }
+            
+            Spacer()
         }
         .padding(.horizontal, 20)
-        .padding(.top, 10)
-    }
-    
-    var contentSection: some View {
-        VStack(spacing: 24) {
-            // Card Image and Basic Info
-            cardImageSection
-            
-            // Quantity Management Section
-            quantitySection
-            
-            // Save Button
-            saveButtonSection
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 20)
+        .padding(.top, 8)
+        .padding(.bottom, 20)
     }
     
     var cardImageSection: some View {
         VStack(spacing: 16) {
-            // Card Image
-            ZStack {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.white.opacity(0.15))
-                    .frame(width: 200, height: 280)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                    )
-                
-                if let imageUrl = card.bestImageUrl {
-                    CachedAsyncImage(
-                        url: imageUrl,
-                        placeholderSystemImage: "photo",
-                        placeholderColor: .white.opacity(0.6)
-                    )
-                    .frame(width: 200, height: 280)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                } else {
-                    VStack(spacing: 12) {
-                        Image(systemName: "photo")
-                            .font(.system(size: 32))
-                            .foregroundColor(.white.opacity(0.6))
-                        
-                        Text("No Image")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.6))
-                    }
+            // Card image with tap to zoom
+            Button(action: { showingImageZoom = true }) {
+                AsyncImage(url: URL(string: currentImageUrl ?? "")) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                } placeholder: {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.white.opacity(0.1))
+                        .overlay(
+                            ProgressView()
+                                .tint(.white)
+                        )
                 }
+                .frame(maxWidth: 300, maxHeight: 420)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.white.opacity(0.05))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                        )
+                )
             }
+            .buttonStyle(PlainButtonStyle())
             
-            // Card Name and Set Info
-            VStack(spacing: 8) {
-                Text(card.name)
-                    .font(.title3)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                    .multilineTextAlignment(.center)
+            // Card stats grid
+            HStack(spacing: 12) {
+                StatBoxView(
+                    title: "Number",
+                    value: "\(card.number) / \(cardSet.printedTotal)",
+                    icon: "number"
+                )
                 
-                HStack(spacing: 12) {
-                    Text("#\(card.displayNumber)")
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.8))
-                    
-                    Text("•")
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.6))
-                    
-                    Text(cardSet.name)
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.8))
-                }
+                StatBoxView(
+                    title: "Rarity",
+                    value: card.rarity,
+                    icon: "star.fill"
+                )
+                
+                StatBoxView(
+                    title: "Set",
+                    value: cardSet.name,
+                    icon: "rectangle.stack.fill"
+                )
             }
+            .padding(.horizontal, 20)
         }
+        .padding(.bottom, 24)
     }
     
-    var quantitySection: some View {
-        VStack(spacing: 20) {
-            // Quantity Control
-            HStack(spacing: 24) {
-                // Minus Button
-                Button(action: decrementQuantity) {
-                    Image(systemName: "minus")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 50, height: 50)
+    var collectionSection: some View {
+        VStack(spacing: 16) {
+            // Collection management section
+            VStack(spacing: 12) {
+                
+                // Current quantity display
+                VStack(spacing: 16) {
+                    // Quantity controls
+                    HStack(spacing: 24) {
+                        // Decrement button
+                        Button(action: decrementQuantity) {
+                            Image(systemName: "minus.circle.fill")
+                                .font(.title)
+                                .foregroundColor(quantity > 0 ? .red : .gray.opacity(0.5))
+                        }
+                        .disabled(quantity <= 0 || isLoading)
+                        
+                        // Current quantity
+                        Text("\(quantity)")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .frame(minWidth: 60)
+                            .animation(.easeInOut(duration: 0.2), value: quantity)
+                        
+                        // Increment button
+                        Button(action: incrementQuantity) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title)
+                                .foregroundColor(isLoading ? .gray.opacity(0.5) : .green)
+                        }
+                        .disabled(isLoading)
+                    }
+                    .padding(.vertical, 8)
+                    
+                    // Action buttons
+                    VStack(spacing: 12) {
+                        // Save changes button
+                        Button(action: { Task { await saveCollection() } }) {
+                            HStack {
+                                if isLoading {
+                                    ProgressView()
+                                        .tint(.white)
+                                        .scaleEffect(0.8)
+                                } else {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.title3)
+                                }
+                                
+                                Text(isLoading ? "Saving..." : "Save Changes")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(hasChanges ? Color.blue : Color.gray.opacity(0.5))
+                            )
+                        }
+                        .disabled(!hasChanges || isLoading)
+                        
+                        // Reset button
+                        if hasChanges {
+                            Button(action: resetQuantity) {
+                                HStack {
+                                    Image(systemName: "arrow.counterclockwise")
+                                        .font(.title3)
+                                    
+                                    Text("Reset")
+                                        .font(.headline)
+                                        .fontWeight(.semibold)
+                                }
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 44)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.white.opacity(0.5), lineWidth: 1)
+                                )
+                            }
+                            .disabled(isLoading)
+                        }
+                    }
+                    
+                    // Error message
+                    if let errorMessage = errorMessage {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.red)
+                            
+                            Text(errorMessage)
+                                .font(.subheadline)
+                                .foregroundColor(.white)
+                                .multilineTextAlignment(.leading)
+                            
+                            Spacer()
+                            
+                            Button("Dismiss") {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    self.errorMessage = nil
+                                }
+                            }
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.blue)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
                         .background(
-                            Circle()
-                                .fill(Color.white.opacity(quantity > 0 ? 0.2 : 0.1))
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.red.opacity(0.2))
                                 .overlay(
-                                    Circle()
-                                        .stroke(Color.white.opacity(quantity > 0 ? 0.4 : 0.2), lineWidth: 1)
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.red.opacity(0.5), lineWidth: 1)
                                 )
                         )
-                }
-                .disabled(quantity <= 0)
-                .opacity(quantity > 0 ? 1.0 : 0.5)
-                
-                // Quantity Display
-                Text("\(quantity)")
-                    .font(.system(size: 36, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(minWidth: 80)
-                
-                // Plus Button
-                Button(action: incrementQuantity) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 50, height: 50)
-                        .background(
-                            Circle()
-                                .fill(Color.white.opacity(0.2))
-                                .overlay(
-                                    Circle()
-                                        .stroke(Color.white.opacity(0.4), lineWidth: 1)
-                                )
-                        )
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
                 }
             }
             .padding(.horizontal, 20)
-            
-            // Quick Quantity Buttons
-            HStack(spacing: 12) {
-                ForEach([1, 5, 10], id: \.self) { quickValue in
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            quantity = quickValue
-                        }
-                    }) {
-                        Text("\(quickValue)")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.white.opacity(quantity == quickValue ? 0.3 : 0.15))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                                    )
-                            )
-                    }
-                }
-                
-                Button(action: {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        quantity = 0
-                    }
-                }) {
-                    Text("Clear")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.white.opacity(quantity == 0 ? 0.3 : 0.15))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                                )
-                        )
-                }
-            }
-        }
-        .padding(.vertical, 20)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white.opacity(0.1))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                )
-        )
-    }
-    
-    var saveButtonSection: some View {
-        Button(action: saveCollection) {
-            HStack(spacing: 12) {
-                if isLoading {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        .scaleEffect(0.8)
-                } else {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 16, weight: .medium))
-                }
-                
-                Text(isLoading ? "Saving..." : "Save to Collection")
-                    .font(.system(size: 16, weight: .semibold))
-            }
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
             .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.white.opacity(0.2))
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.white.opacity(0.1))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.white.opacity(0.4), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
                     )
             )
+            .padding(.horizontal, 20)
         }
-        .disabled(isLoading)
-        .opacity(isLoading ? 0.7 : 1.0)
+        .padding(.bottom, 24)
     }
     
     var successMessageOverlay: some View {
@@ -331,6 +364,11 @@ private extension CardCollectionView {
         )
         .transition(.scale.combined(with: .opacity))
     }
+    
+    // Computed properties
+    var hasChanges: Bool {
+        quantity != originalQuantity
+    }
 }
 
 // MARK: - Actions
@@ -350,39 +388,105 @@ private extension CardCollectionView {
         }
     }
     
-    func saveCollection() {
+    func resetQuantity() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            quantity = originalQuantity
+        }
+        errorMessage = nil
+    }
+    
+    func loadCollectionData() async {
+        // TODO: Get user ID from auth service
+        // For now, using a placeholder user ID
+        let userId = 1
+        
+        do {
+            let userCollection = try await collectionService.getUserCollection(userId: userId)
+            
+            // Find this card in the user's collection
+            if let entry = userCollection.first(where: { $0.card.id == card.id }) {
+                await MainActor.run {
+                    self.collectionEntry = CollectionEntry(
+                        id: entry.id,
+                        userId: entry.userId,
+                        quantity: entry.quantity,
+                        acquiredDate: entry.acquiredDate,
+                        card: nil
+                    )
+                    self.quantity = entry.quantity
+                    self.originalQuantity = entry.quantity
+                }
+            } else {
+                await MainActor.run {
+                    self.quantity = 0
+                    self.originalQuantity = 0
+                }
+            }
+        } catch {
+            await MainActor.run {
+                print("Failed to load collection data: \(error)")
+                // Set defaults if unable to load
+                self.quantity = 0
+                self.originalQuantity = 0
+            }
+        }
+    }
+    
+    func saveCollection() async {
         // Prevent multiple saves
         guard !isLoading else { return }
         
-        isLoading = true
-        errorMessage = nil
+        await MainActor.run {
+            isLoading = true
+            errorMessage = nil
+        }
         
-        // Simulate API call for now
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            isLoading = false
+        // TODO: Get user ID from auth service
+        let userId = 1
+        
+        do {
+            if quantity == 0 && collectionEntry != nil {
+                // Delete the entry if quantity is 0 and entry exists
+                try await collectionService.removeFromCollection(entryId: collectionEntry.id)
+                await MainActor.run {
+                    self.collectionEntry = nil
+                }
+            } else if quantity > 0 {
+                // Add or update the entry
+                let updatedEntry = try await collectionService.addToCollection(
+                    cardId: card.id,
+                    userId: userId,
+                    quantity: quantity
+                )
+                await MainActor.run {
+                    self.collectionEntry = updatedEntry
+                }
+            }
             
-            // Simulate random success/failure for demo
-            if Bool.random() {
-                // Success
+            // Success handling
+            await MainActor.run {
+                self.originalQuantity = self.quantity
+                self.isLoading = false
+                
                 withAnimation(.easeInOut(duration: 0.3)) {
-                    showSuccessMessage = true
+                    self.showSuccessMessage = true
                 }
                 
                 // Hide success message after delay
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                     withAnimation(.easeInOut(duration: 0.3)) {
-                        showSuccessMessage = false
+                        self.showSuccessMessage = false
                     }
                 }
-            } else {
-                // Simulate error
-                errorMessage = "Failed to update collection. Please try again."
+            }
+        } catch {
+            // Error handling
+            await MainActor.run {
+                self.isLoading = false
+                self.errorMessage = "Failed to update collection. Please try again."
+                print("Failed to save collection: \(error)")
             }
         }
-        
-        // TODO: Replace with actual API call
-        // Try await collectionService.updateCardQuantity(cardId: card.id, quantity: quantity)
-        print("Saving card \(card.name) with quantity \(quantity)")
     }
 }
 
